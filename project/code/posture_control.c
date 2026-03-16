@@ -4,6 +4,7 @@ uint32 system_count = 0;//系统计数器
 bool run_flag = false;
 cascade_value_struct cascade_value;
 int16 car_speed = 0;
+float target_speed = 0.0f; // 目标速度，可以通过串口调参修改        
 
 //******串级控制器初始化 */
 void cascade_init(void){
@@ -14,21 +15,21 @@ void cascade_init(void){
     cascade_value.cascade_common_value.acc_ration = 4;    // 加速度置信度
     cascade_value.cascade_common_value.filtered_value = 0;  // 互补滤波后的值
     cascade_value.cascade_common_value.dt = 0.005f;          // 采样时间间隔
-    cascade_value.cascade_common_value.mechanical_offset = 702; //机械偏置:小车在-800左右为平衡点
+    cascade_value.cascade_common_value.mechanical_offset = 853; //机械偏置:小车在-800左右为平衡点
 
     //角速度闭环控制结构体
-    cascade_value.angular_speed_cycle.kp = 0.43f;
+    cascade_value.angular_speed_cycle.kp = 0.43f;//0.43f
     cascade_value.angular_speed_cycle.ki = 0.0f;
     cascade_value.angular_speed_cycle.kd = 0.0f;
 
     //角度闭环控制结构体
-    cascade_value.angle_cycle.kp = 10.4f;
+    cascade_value.angle_cycle.kp = 10.4f;//10.4f
     cascade_value.angle_cycle.ki = 0.0f;
     cascade_value.angle_cycle.kd = 0.0f;
 
     //速度闭环控制结构体
-    cascade_value.speed_cycle.kp = 0.2f;
-    cascade_value.speed_cycle.ki = 0.0f;
+    cascade_value.speed_cycle.kp = 5.2f; //0.2f
+    cascade_value.speed_cycle.ki = 0.05f;//0.0f
     cascade_value.speed_cycle.kd = 0.0f;
 
 }
@@ -86,7 +87,8 @@ void pit_isr_callback(void)
     if(system_count % 20 ==0){
         small_driver_get_speed();
         car_speed = (motor_value.receive_left_speed_data + motor_value.receive_right_speed_data)/2;
-        pid_control_pd(&cascade_value.speed_cycle,0.0f,car_speed);
+        //pid_control_pd(&cascade_value.speed_cycle,0.0f,car_speed);
+        pid_control_pd(&cascade_value.speed_cycle,target_speed,car_speed);
     }
 
 

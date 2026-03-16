@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 
+
 void button_init(void){
     gpio_init(BUTTON1, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY1 输入 默认高电平 上拉输入
     gpio_init(BUTTON2, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY2 输入 默认高电平 上拉输入
@@ -126,6 +127,39 @@ void air_printf(const char* fmt, ...)
     // 如果格式化成功，通过 UART 发送
     if(str_length > 0)
     {
-        uart_write_buffer(OPTIMIZER_UART, air_printf_buffer, (uint32)str_length);
+        //uart_write_buffer(OPTIMIZER_UART, air_printf_buffer, (uint32)str_length);
+        wireless_uart_send_buffer(air_printf_buffer, (uint32)str_length); // 通过无线串口发送
     }
+}
+
+void my_wireless_optimizer(uint8 data)
+{
+    if('w' == data)
+        {
+            target_speed = -50.0f;// 前进
+        }
+        else if('s' == data)
+        {
+            target_speed = 50.0f; // 后退
+        }
+        else if('a' == data)
+        {
+            run_flag = true; // 启动控制
+        }
+        else if('d' == data)
+        {
+            run_flag = false; // 停止控制
+        }
+        else if('j' == data)
+        {
+            cascade_value.cascade_common_value.mechanical_offset += 1; // 增加机械偏置
+        }
+        else if('k' == data)
+        {
+            cascade_value.cascade_common_value.mechanical_offset -= 1; // 减小机械偏置
+        }
+        else if('!' == data)
+        {
+            target_speed = 0.0f; 
+        }
 }

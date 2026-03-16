@@ -53,6 +53,11 @@
 #include "zf_device_type.h"
 #include "zf_device_wireless_uart.h"
 
+ZF_WEAK void my_wireless_optimizer(uint8 data)
+{
+    (void)data;
+}
+
 static  fifo_struct                                     wireless_uart_fifo;
 static  uint8                                           wireless_uart_buffer[WIRELESS_UART_BUFFER_SIZE];
 
@@ -199,6 +204,7 @@ void wireless_uart_callback (void)
     if(uart_query_byte(WIRELESS_UART_INDEX, &wireless_uart_data))
     {
         fifo_write_buffer(&wireless_uart_fifo, &wireless_uart_data, 1);
+        my_wireless_optimizer(wireless_uart_data); //test 3-15
     }
 #if WIRELESS_UART_AUTO_BAUD_RATE                                                // 开启自动波特率
     if(WIRELESS_UART_AUTO_BAUD_RATE_START == wireless_auto_baud_flag && 3 == fifo_used(&wireless_uart_fifo))

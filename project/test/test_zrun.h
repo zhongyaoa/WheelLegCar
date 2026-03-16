@@ -15,4 +15,6 @@ void zrun_test_servo(void);
 void zrun_test_controler(void);
 void zrun_test_motor_read_speed(void);
 void zrun_test_cam(void);
+void zrun_test_wireless_uart(void);
+void zrun_test_balance_wireless_uart(void);
 #endif

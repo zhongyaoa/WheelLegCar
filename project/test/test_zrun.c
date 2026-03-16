@@ -1,5 +1,6 @@
 #include "test_zrun.h"
 #include "controler.h"
+#include "posture_control.h"
 
 // **************************** 变量定义区域 ****************************
 #define SERVO_MOTOR_PWM1            (TCPWM_CH13_P00_3)                          // 定义主板上舵机对应引脚
@@ -40,7 +41,58 @@ uint8 image_copy[MT9V03X_H][MT9V03X_W];
 uint8 wifi_spi_test_buffer[] = "this is wifi spi test buffer";
 uint8 wifi_spi_get_data_buffer[256];
 uint32 data_length = 0;
+// **************************** test_wireless_uart ****************************
+#define LED1                    (P19_0)
+uint8 data_buffer[32];
+uint8 data_len;
 
+
+void zrun_test_wireless_uart(void)
+{
+    clock_init(SYSTEM_CLOCK_250M); 	// 时钟配置及系统初始化<务必保留>
+    debug_init();                          // 调试串口信息初始化
+    
+    // 此处编写用户代码 例如外设初始化代码等
+    uint8 count = 0;
+
+    gpio_init(LED1, GPO, GPIO_HIGH, GPO_PUSH_PULL);                             // 初始化 LED1 输出 默认高电平 推挽输出模式
+    if(wireless_uart_init())                                                    // 判断是否通过初始化
+    {
+        while(1)                                                                // 初始化失败就在这进入死循环
+        {
+            gpio_toggle_level(LED1);                                            // 翻转 LED 引脚输出电平 控制 LED 亮灭
+            system_delay_ms(100);                                               // 短延时快速闪灯表示异常
+        }
+    }
+    wireless_uart_send_byte('\r');
+    wireless_uart_send_byte('\n');
+    wireless_uart_send_string("SEEKFREE wireless uart demo.\r\n");              // 初始化正常 输出测试信息
+
+    // 此处编写用户代码 例如外设初始化代码等
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+
+        data_len = (uint8)wireless_uart_read_buffer(data_buffer, 32);             // 查看是否有消息 默认缓冲区是 WIRELESS_UART_BUFFER_SIZE 总共 64 字节
+        if(data_len != 0)                                                       // 收到了消息 读取函数会返回实际读取到的数据个数
+        {
+            wireless_uart_send_buffer(data_buffer, data_len);                     // 将收到的消息发送回去
+            memset(data_buffer, 0, 32);
+            func_uint_to_str((char *)data_buffer, data_len);
+            wireless_uart_send_string("\r\ndata len:");                                 // 显示实际收到的数据信息
+            wireless_uart_send_buffer(data_buffer, strlen((const char *)data_buffer));    // 显示收到的数据个数
+            wireless_uart_send_string(".\r\n");
+        }
+        if(count ++ > 10)
+        {
+            count = 0;
+            gpio_toggle_level(LED1);                                            // 翻转 LED 引脚输出电平 控制 LED 亮灭
+        }
+        system_delay_ms(50);
+
+        // 此处编写需要循环执行的代码
+    } 
+}
 
 void zrun_test_wifi(void)
 {
@@ -347,7 +399,7 @@ void zrun_test_balance(void)
     button_init();
     motor_control_init();               // 电机控制初始化
     cascade_init();                     // 滤波链初始化
-    serial_optimizer_init();           // 串口初始化
+    //serial_optimizer_init();           // 串口初始化
 
     while(1)
     {
@@ -362,16 +414,74 @@ void zrun_test_balance(void)
     }
     pit_ms_init( PIT_CH10, 1 );          // pit通道10初始化，周期中断时间1ms
     while(true){
-        printf("%d,%d,%d,%d,%d,%d,%f\r\n", imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z,cascade_value.cascade_common_value.filtered_value);
+        //printf("%d,%d,%d,%d,%d,%d,%f\r\n", imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z,cascade_value.cascade_common_value.filtered_value);
+        air_printf("speed:%d target:%f\r\n", car_speed, target_speed);
+        printf("speed:%d target:%f\r\n", car_speed, target_speed);
         //printf("%d,%d\r\n", motor_value.receive_left_speed_data, motor_value.receive_right_speed_data);
         if(button_press(bt1)){
             run_flag = true;
-            printf("bt1\r\n");
+            air_printf("bt1\r\n");  
         }
         else if(button_press(bt2)){
-            run_flag = false;
-            printf("bt2\r\n");
-        }       
+            target_speed = 0.0f;
+            air_printf("bt2\r\n");
+        }
+        else if(button_press(bt3)){
+            target_speed = 50.0f;
+            air_printf("bt3\r\n");
+        }
+        else if(button_press(bt4)){
+            target_speed = -50.0f;
+            air_printf("bt4\r\n");
+        }
+        system_delay_ms(100); 
+
+    }
+}
+
+void zrun_test_balance_wireless_uart(void)
+{
+    //clock_init(SYSTEM_CLOCK_250M);                              // 时钟初始化
+    //debug_init();                                               // debug 串口初始化
+    button_init();
+    motor_control_init();               // 电机控制初始化
+    cascade_init();                     // 滤波链初始化
+    wireless_uart_init();                 // 无线串口初始化
+    //serial_optimizer_init();           // 串口初始化
+
+    while(1)
+    {
+        if(imu660ra_init())
+        {
+           printf("\r\n imu660ra init error.");        // imu660ra 初始化失败
+        }
+        else
+        {
+           break;
+        }
+    }
+    pit_ms_init( PIT_CH10, 1 );          // pit通道10初始化，周期中断时间1ms
+    while(true){
+        //printf("%d,%d,%d,%d,%d,%d,%f\r\n", imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z,cascade_value.cascade_common_value.filtered_value);
+        air_printf("speed:%d target:%f\r\n mechanical_offset:%d", car_speed, target_speed, cascade_value.cascade_common_value.mechanical_offset);
+        printf("speed:%d target:%f\r\n", car_speed, target_speed);
+        //printf("%d,%d\r\n", motor_value.receive_left_speed_data, motor_value.receive_right_speed_data);
+        if(button_press(bt1)){
+            run_flag = true;
+            air_printf("bt1\r\n");  
+        }
+        else if(button_press(bt2)){
+            target_speed = 0.0f;
+            air_printf("bt2\r\n");
+        }
+        else if(button_press(bt3)){
+            target_speed = 50.0f;
+            air_printf("bt3\r\n");
+        }
+        else if(button_press(bt4)){
+            target_speed = -50.0f;
+            air_printf("bt4\r\n");
+        }
         system_delay_ms(100); 
 
     }

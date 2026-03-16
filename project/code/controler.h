@@ -44,5 +44,7 @@ void led(LedCmd cmd);
 void serial_optimizer_callback(cascade_value_struct* cascade_value_ptr); //接收串口信息，调整参数
 void serial_optimizer_init(void); //串口初始化
 void air_printf(const char* fmt, ...); //无线串口打印函数
+void my_wireless_optimizer(uint8 data);
+
 
 #endif

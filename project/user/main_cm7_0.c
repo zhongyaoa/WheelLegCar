@@ -23,7 +23,9 @@ int main(void){
     //zrun_test_servo();
     //zrun_test_controler();
     //zrun_test_balance();
-    zrun_test_airprintf();
+    //zrun_test_wireless_uart();
+    zrun_test_balance_wireless_uart();
+    //zrun_test_airprintf();
     //zrun_test_cam();
     //zrun_test_wifi();
     //zrun_test_motor_read_speed();
