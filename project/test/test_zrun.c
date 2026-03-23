@@ -1,26 +1,9 @@
 #include "test_zrun.h"
 #include "controler.h"
 #include "posture_control.h"
+#include "servo.h"
 
 // **************************** 变量定义区域 ****************************
-#define SERVO_MOTOR_PWM1            (TCPWM_CH13_P00_3)                          // 定义主板上舵机对应引脚
-#define SERVO_MOTOR_PWM2            (TCPWM_CH12_P01_0)                          // 定义主板上舵机对应引脚
-#define SERVO_MOTOR_PWM3            (TCPWM_CH11_P01_1)                          // 定义主板上舵机对应引脚
-#define SERVO_MOTOR_PWM4            (TCPWM_CH20_P08_1)                          // 主板上的有刷电机2引脚飞线
-#define SERVO_MOTOR_FREQ            (50 )                                       // 定义主板上舵机频率  请务必注意范围 50-300
-
-#define SERVO_MOTOR_L_MAX           (50 )                                       // 定义主板上舵机活动范围 角度
-#define SERVO_MOTOR_R_MAX           (150)                                       // 定义主板上舵机活动范围 角度
-
-#define SERVO_MOTOR_DUTY(x)         ((float)PWM_DUTY_MAX/(1000.0/(float)SERVO_MOTOR_FREQ)*(0.5+(float)(x)/90.0))
-
-#if (SERVO_MOTOR_FREQ<50 || SERVO_MOTOR_FREQ>300)
-    #error "SERVO_MOTOR_FREQ ERROE!"
-#endif
-
-float servo_motor_duty = 90.0;                                                  // 舵机动作角度
-float servo_motor_dir = 1;                                                      // 舵机动作状态
-
 //****************摄像头参数设置*************/
 #define INCLUDE_BOUNDARY_TYPE   3
 // 边界的点数量远大于图像高度，便于保存回弯的情况
@@ -37,7 +20,7 @@ uint8 image_copy[MT9V03X_H][MT9V03X_W];
 #define UDP_TARGET_IP           "192.168.137.1"             // 连接目标的 IP
 #define UDP_TARGET_PORT         "8086"                      // 连接目标的端口
 #define WIFI__LOCAL_PORT        "6666"                      // 本机的端口 0：随机  可设置范围2048-65535  默认 6666
-
+#define BUZZER_PIN              (P19_4)                                         // 定义主板蜂鸣器引脚
 uint8 wifi_spi_test_buffer[] = "this is wifi spi test buffer";
 uint8 wifi_spi_get_data_buffer[256];
 uint32 data_length = 0;
@@ -46,6 +29,31 @@ uint32 data_length = 0;
 uint8 data_buffer[32];
 uint8 data_len;
 
+void zrun_test_buzzer(void){
+    uint16 count = 0;
+
+    gpio_init(BUZZER_PIN, GPO, GPIO_LOW, GPO_PUSH_PULL);                        // 初始化 BUZZER_PIN 输出 默认低电平 推挽输出模式
+    
+    
+    // 此处编写用户代码 例如外设初始化代码等
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+
+
+        if(count < 10)
+            gpio_toggle_level(BUZZER_PIN);
+        else if(count < 20)
+            gpio_set_level(BUZZER_PIN, GPIO_LOW);
+        else
+            count = 0;
+        count ++;
+        system_delay_ms(100);
+      
+      
+        // 此处编写需要循环执行的代码
+    }
+}
 
 void zrun_test_wireless_uart(void)
 {
@@ -333,46 +341,25 @@ void zrun_test_controler(void){
 }
 
 void zrun_test_servo(void){
-    button_init();
+    servo_init();
     while(true){
-        if(button_press(bt1)){
-            break;
-        }
-        system_delay_ms(10);
-    }
-    //pwm_init(SERVO_MOTOR_PWM1, SERVO_MOTOR_FREQ, 300);
-    //pwm_init(SERVO_MOTOR_PWM2, SERVO_MOTOR_FREQ, 300);
-    pwm_init(SERVO_MOTOR_PWM4, SERVO_MOTOR_FREQ, 300);
-    while(true)
-    {
-        // 此处编写需要循环执行的代码
+        for(float angle = -90; angle <= 90; angle += 1){
+            servo_set_angle(R1, angle);
+            servo_set_angle(R2, angle);
+            servo_set_angle(L1, angle);
+            servo_set_angle(L2, angle);
 
-        if(servo_motor_dir)
-        {
-            servo_motor_duty ++;
-            if(servo_motor_duty >= SERVO_MOTOR_R_MAX)
-            {
-                servo_motor_dir = 0x00;
-            }
+            system_delay_ms(50);
         }
-        else
-        {
-            servo_motor_duty --;
-            if(servo_motor_duty <= SERVO_MOTOR_L_MAX)
-            {
-                servo_motor_dir = 0x01;
-            }
+        for(float angle = 90; angle >= -90; angle -= 10){
+            servo_set_angle(R1, angle);
+            servo_set_angle(R2, angle);
+            servo_set_angle(L1, angle);
+            servo_set_angle(L2, angle);
+            system_delay_ms(50);
         }
-        
-        //pwm_set_duty(SERVO_MOTOR_PWM1, (uint16)SERVO_MOTOR_DUTY(servo_motor_duty));
-        //pwm_set_duty(SERVO_MOTOR_PWM2, (uint16)SERVO_MOTOR_DUTY(200-servo_motor_duty));
-        pwm_set_duty(SERVO_MOTOR_PWM4, (uint16)SERVO_MOTOR_DUTY(200-servo_motor_duty));
-        system_delay_ms(15);                                                   // 延时
-      
-      
-      
-        // 此处编写需要循环执行的代码a
-    }
+    } 
+    
 }
 
 void zrun_test_led(void){

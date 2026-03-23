@@ -1135,6 +1135,12 @@
             <name>$PROJ_DIR$\..\..\code\small_driver_uart_control.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\servo.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\servo.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
         </file>
     </group>
