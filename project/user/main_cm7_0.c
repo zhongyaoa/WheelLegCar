@@ -19,13 +19,15 @@ int main(void){
     clock_init(SYSTEM_CLOCK_250M);                     // 时钟初始化
     debug_init();                                      // debug 串口初始化
     //测试函数
-    zrun_test_led();
+    //zrun_test_gps();
+    //zrun_test_display();
+    //zrun_test_led();
     //zrun_test_servo();
     //zrun_test_buzzer();
     //zrun_test_controler();
     //zrun_test_balance();
     //zrun_test_wireless_uart();
-    //zrun_test_balance_wireless_uart();
+    zrun_test_balance_wireless_uart();
     //zrun_test_airprintf();
     //zrun_test_cam();
     //zrun_test_wifi();

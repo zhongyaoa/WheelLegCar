@@ -8,6 +8,8 @@
 
 #include "zf_common_headfile.h"
 
+void zrun_test_gps(void);
+void zrun_test_display(void);
 void zrun_test_buzzer(void);
 void zrun_test_wifi(void);
 void zrun_test_balance(void);

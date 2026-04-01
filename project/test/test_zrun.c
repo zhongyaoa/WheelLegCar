@@ -6,28 +6,151 @@
 // **************************** 变量定义区域 ****************************
 //****************摄像头参数设置*************/
 #define INCLUDE_BOUNDARY_TYPE   3
+
 // 边界的点数量远大于图像高度，便于保存回弯的情况
 #define BOUNDARY_NUM            (MT9V03X_H * 3 / 2)
+
 uint8 xy_x1_boundary[BOUNDARY_NUM], xy_x2_boundary[BOUNDARY_NUM], xy_x3_boundary[BOUNDARY_NUM];
 uint8 xy_y1_boundary[BOUNDARY_NUM], xy_y2_boundary[BOUNDARY_NUM], xy_y3_boundary[BOUNDARY_NUM];
+
 uint8 x1_boundary[MT9V03X_H], x2_boundary[MT9V03X_H], x3_boundary[MT9V03X_H];
 uint8 y1_boundary[MT9V03X_W], y2_boundary[MT9V03X_W], y3_boundary[MT9V03X_W];
+
 // 图像备份数组，在发送前将图像备份再进行发送，这样可以避免图像出现撕裂的问题
 uint8 image_copy[MT9V03X_H][MT9V03X_W];
-//**************************************/
-#define WIFI_SSID_TEST          "SeekFree"
-#define WIFI_PASSWORD_TEST      "SEEKFREE"
-#define UDP_TARGET_IP           "192.168.137.1"             // 连接目标的 IP
-#define UDP_TARGET_PORT         "8086"                      // 连接目标的端口
-#define WIFI__LOCAL_PORT        "6666"                      // 本机的端口 0：随机  可设置范围2048-65535  默认 6666
-#define BUZZER_PIN              (P19_4)                                         // 定义主板蜂鸣器引脚
-uint8 wifi_spi_test_buffer[] = "this is wifi spi test buffer";
-uint8 wifi_spi_get_data_buffer[256];
-uint32 data_length = 0;
+#define LED1                    (P19_0)
 // **************************** test_wireless_uart ****************************
 #define LED1                    (P19_0)
 uint8 data_buffer[32];
 uint8 data_len;
+// **************************** test_buzzer ****************************
+#define BUZZER_PIN              (P19_4)
+// **************************** test_display ****************************
+#define IPS200_TYPE     (IPS200_TYPE_SPI)                                       // 八位并口两寸屏 这里宏定义填写 IPS200_TYPE_PARALLEL8 SPI 串口两寸屏 这里宏定义填写 IPS200_TYPE_SPI
+
+void zrun_test_gps(void){
+    gnss_init(TAU1201);
+    wireless_uart_init(); //无线串口初始化 用于输出 gnss 数据
+    air_printf("dis:%f\r\n", get_two_points_distance(45.714935, 126.626564, 45.714855, 126.626960));        // 计算两点距离示例
+    air_printf("dir:%f\r\n", get_two_points_azimuth(45.714935, 126.626564, 45.714855, 126.626960));         // 计算两点夹角示例
+    
+    // 此处编写用户代码 例如外设初始化代码等
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+
+        //gnss数据接收与解析都是通过串口中断调用gnss_uart_callback函数进行实现的
+        //数据解析完毕之后gnss_flag标志位会置1
+        if(gnss_flag)
+        {
+            gnss_flag = 0;
+
+            gnss_data_parse();           //开始解析数据
+
+            printf("now time:\r\n");                                            // 输出年月日时分秒
+            printf("year-%d, month-%d, day-%d\r\n", gnss.time.year, gnss.time.month, gnss.time.day);           // 输出年月日时分秒
+            printf("hour-%d, minute-%d, second-%d\r\n", gnss.time.hour, gnss.time.minute, gnss.time.second);   // 输出年月日时分秒
+            printf("gnss_state       = %d\r\n", gnss.state);              //输出当前定位有效模式 1：定位有效  0：定位无效
+            air_printf("latitude        = %f\r\n", gnss.latitude);           //输出纬度信息
+            air_printf("longitude       = %f\r\n", gnss.longitude);          //输出经度信息
+            printf("speed           = %f\r\n", gnss.speed);              //输出速度信息
+            printf("direction       = %f\r\n", gnss.direction);          //输出方向信息
+            printf("satellite_used  = %d\r\n", gnss.satellite_used);     //输出当前用于定位的卫星数量
+            printf("height          = %f\r\n", gnss.height);             //输出当前gnss天线所处高度
+        }
+        system_delay_ms(1000);//这里延时主要目的是为了降低输出速度，便于在 逐飞助手 中观察数据，实际使用的时候不需要这样去延时
+
+        // 此处编写需要循环执行的代码
+    }
+}
+
+void zrun_test_display(void){
+     uint16_t data[128];
+    int16_t data_index = 0;
+    for( ; 64 > data_index; data_index ++)
+        data[data_index] = data_index;
+    for(data_index = 64; 128 > data_index; data_index ++)
+        data[data_index] = 128 - data_index;
+
+    ips200_set_dir(IPS200_PORTAIT);
+    ips200_set_color(RGB565_RED, RGB565_BLACK);
+    ips200_init(IPS200_TYPE);
+
+    // 此处编写用户代码 例如外设初始化代码等
+    while(true)
+    {
+        // 此处编写需要循环执行的代码
+
+        ips200_clear();
+        ips200_show_rgb565_image(0, 120, (const uint16 *)gImage_seekfree_logo, 240, 80, 240, 80, 0);    // 显示一个RGB565色彩图片 原图240*80 显示240*80 低位在前
+        system_delay_ms(1500);
+
+        ips200_full(RGB565_GRAY);
+        ips200_show_string( 0 , 16*7,   "SEEKFREE");                            // 显示字符串
+        ips200_show_chinese(80, 16*7,   16, (const uint8 *)chinese_test, 4, RGB565_BLUE);               // 显示汉字
+
+        // 显示的 flaot 数据 最多显示 8bit 位整数 最多显示 6bit 位小数
+        ips200_show_float(  0 , 16*8,   -13.141592,     1, 6);                  // 显示 float 数据 1bit 整数 6bit 小数 应当显示 -3.141592 总共会有 9 个字符的显示占位
+        ips200_show_float(  80, 16*8,   13.141592,      8, 4);                  // 显示 float 数据 8bit 整数 4bit 小数 应当显示 13.1415 总共会有 14 个字符的显示占位 后面会有 5 个字符的空白占位
+
+        ips200_show_int(    0 , 16*9,   -127,           2);                     // 显示 int8 数据
+        ips200_show_uint(   80, 16*9,   255,            4);                     // 显示 uint8 数据
+
+        ips200_show_int(    0 , 16*10,  -32768,         4);                     // 显示 int16 数据
+        ips200_show_uint(   80, 16*10,  65535,          6);                     // 显示 uint16 数据
+
+        ips200_show_int(    0 , 16*11,  -2147483648,    8);                     // 显示 int32 数据 8bit 整数 应当显示 -47483648
+        ips200_show_uint(   80, 16*11,  4294967295,     8);                     // 显示 uint32 数据 10bit 整数 应当显示 4294967295
+
+        system_delay_ms(1000);
+
+        ips200_full(RGB565_GRAY);
+        ips200_show_wave(88, 144, data, 128, 64,  64, 32);                      // 显示一个三角波形 波形宽度 128 波形最大值 64 显示宽度 64 显示最大值 32
+        system_delay_ms(1000);
+        ips200_full(RGB565_GRAY);
+        ips200_show_wave(56, 128, data, 128, 64, 128, 64);                      // 显示一个三角波形 波形宽度 128 波形最大值 64 显示宽度 128 显示最大值 64
+        system_delay_ms(1000);
+
+        // 使用画线函数 从顶上两个角画射线
+        ips200_clear();
+        for(data_index = 0; 240 > data_index; data_index += 10)
+        {
+            ips200_draw_line(0, 0, data_index, 320 - 1, RGB565_66CCFF);
+            system_delay_ms(20);
+        }
+        ips200_draw_line(0, 0, 240 - 1, 320 - 1, RGB565_66CCFF);
+        for(data_index = 310; 0 <= data_index; data_index -= 10)
+        {
+            ips200_draw_line(0, 0, 240 - 1, data_index, RGB565_66CCFF);
+            system_delay_ms(20);
+        }
+
+        ips200_draw_line(240 - 1, 0, 239, 320 - 1, RGB565_66CCFF);
+        for(data_index = 230; 0 <= data_index; data_index -= 10)
+        {
+            ips200_draw_line(240 - 1, 0, data_index, 320 - 1, RGB565_66CCFF);
+            system_delay_ms(20);
+        }
+        ips200_draw_line(240 - 1, 0, 0, 320 - 1, RGB565_66CCFF);
+        for(data_index = 310; 0 <= data_index; data_index -= 10)
+        {
+            ips200_draw_line(240 - 1, 0, 0, data_index, RGB565_66CCFF);
+            system_delay_ms(20);
+        }
+        system_delay_ms(1000);
+
+        ips200_full(RGB565_RED);
+        system_delay_ms(500);
+        ips200_full(RGB565_GREEN);
+        system_delay_ms(500);
+        ips200_full(RGB565_BLUE);
+        system_delay_ms(500);
+        ips200_full(RGB565_WHITE);
+        system_delay_ms(500);
+
+        // 此处编写需要循环执行的代码
+    }
+}
 
 void zrun_test_buzzer(void){
     uint16 count = 0;
@@ -102,77 +225,13 @@ void zrun_test_wireless_uart(void)
     } 
 }
 
-void zrun_test_wifi(void)
-{
-
-
-
-    while(wifi_spi_init(WIFI_SSID_TEST, WIFI_PASSWORD_TEST))
-    {
-        printf("\r\n connect wifi failed. \r\n");
-        system_delay_ms(100);                                                   // 初始化失败 等待 100ms
-    }
-
-    printf("\r\n module version:%s",wifi_spi_version);                          // 模块固件版本
-    printf("\r\n module mac    :%s",wifi_spi_mac_addr);                         // 模块 MAC 信息
-    printf("\r\n module ip     :%s",wifi_spi_ip_addr_port);                     // 模块 IP 地址
-
-    // zf_device_wifi_spi.h 文件内的宏定义可以更改模块连接(建立) WIFI 之后，是否自动连接 TCP 服务器、创建 UDP 连接
-    if(0 == WIFI_SPI_AUTO_CONNECT)                                              // 如果没有开启自动连接 就需要手动连接目标 IP
-    {
-        while(wifi_spi_socket_connect(                                          // 向指定目标 IP 的端口建立 UDP 连接
-            "UDP",                                                              // 指定使用UDP方式通讯
-            UDP_TARGET_IP,                                                      // 指定远端的IP地址，填写上位机的IP地址
-            UDP_TARGET_PORT,                                                    // 指定远端的端口号，填写上位机的端口号，通常上位机默认是8080
-            WIFI__LOCAL_PORT))                                                  // 指定本机的端口号
-        {
-            // 如果一直建立失败 考虑一下是不是没有接硬件复位
-            printf("\r\n Connect UDP Servers error, try again.");
-            system_delay_ms(100);                                               // 建立连接失败 等待 100ms
-        }
-    }
-
-
-    // 发送测试数据至服务器
-    data_length = wifi_spi_send_buffer(wifi_spi_test_buffer, sizeof(wifi_spi_test_buffer));
-    wifi_spi_udp_send_now();
-    if(!data_length)
-    {
-        printf("\r\n send success.");
-    }
-    else
-    {
-        printf("\r\n %d bytes data send failed.", data_length);
-    }
-
-    // 此处编写用户代码 例如外设初始化代码等
-    while(true)
-    {
-        // 此处编写需要循环执行的代码
-        data_length = wifi_spi_read_buffer(wifi_spi_get_data_buffer, sizeof(wifi_spi_get_data_buffer));
-        if(data_length)                                                         // 如果接收到数据 则进行数据类型判断
-        {
-            printf("\r\n Get data: <%s>.", wifi_spi_get_data_buffer);
-            if(!wifi_spi_send_buffer(wifi_spi_get_data_buffer, data_length))
-            {
-                wifi_spi_udp_send_now();
-                printf("\r\n send success.");
-                memset(wifi_spi_get_data_buffer, 0, data_length);          // 数据发送完成 清空数据
-            }
-            else
-            {
-                printf("\r\n %d bytes data send failed.", data_length);
-            }
-        }
-        system_delay_ms(100);
-
-        // 此处编写需要循环执行的代码
-    }
-}
-
 void zrun_test_cam(void){
-    seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_CUSTOM);
-    led_init();
+    // 设置逐飞助手使用DEBUG串口进行收发
+    seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_DEBUG_UART);
+    // 此处编写用户代码 例如外设初始化代码等
+
+    gpio_init(LED1, GPO, GPIO_HIGH, GPO_PUSH_PULL);                             // 初始化 LED1 输出 默认高电平 推挽输出模式
+
 #if(0 != INCLUDE_BOUNDARY_TYPE)
     int32 i=0;
 #endif
@@ -185,7 +244,7 @@ void zrun_test_cam(void){
     while(1)
     {
         if(mt9v03x_init())
-            led(toggle);                                            // 翻转 LED 引脚输出电平 控制 LED 亮灭 初始化出错这个灯会闪的很慢
+            gpio_toggle_level(LED1);                                            // 翻转 LED 引脚输出电平 控制 LED 亮灭 初始化出错这个灯会闪的很慢
         else
             break;
         system_delay_ms(500);                                                   // 闪灯表示异常
@@ -366,13 +425,13 @@ void zrun_test_led(void){
     led_init();
     button_init();
     while(true){
-        if(button_press(bt1)){
+        if(button_press(UP)){
             led(on);
         }
-        else if(button_press(bt2)){
+        else if(button_press(DOWN)){
             led(off);
         }
-        else if(button_press(bt3)){
+        else if(button_press(LEFT)){
             led(toggle);
         }
         system_delay_ms(100);
@@ -405,21 +464,21 @@ void zrun_test_balance(void)
         air_printf("speed:%d target:%f\r\n", car_speed, target_speed);
         printf("speed:%d target:%f\r\n", car_speed, target_speed);
         //printf("%d,%d\r\n", motor_value.receive_left_speed_data, motor_value.receive_right_speed_data);
-        if(button_press(bt1)){
+        if(button_press(UP)){
             run_flag = true;
-            air_printf("bt1\r\n");  
+            air_printf("UP\r\n");  
         }
-        else if(button_press(bt2)){
+        else if(button_press(DOWN)){
             target_speed = 0.0f;
-            air_printf("bt2\r\n");
+            air_printf("DOWN\r\n");
         }
-        else if(button_press(bt3)){
+        else if(button_press(LEFT)){
             target_speed = 50.0f;
-            air_printf("bt3\r\n");
+            air_printf("LEFT\r\n");
         }
-        else if(button_press(bt4)){
+        else if(button_press(NE)){
             target_speed = -50.0f;
-            air_printf("bt4\r\n");
+            air_printf("NE\r\n");
         }
         system_delay_ms(100); 
 
@@ -430,6 +489,11 @@ void zrun_test_balance_wireless_uart(void)
 {
     //clock_init(SYSTEM_CLOCK_250M);                              // 时钟初始化
     //debug_init();                                               // debug 串口初始化
+    servo_init();
+    servo_set_angle(R1, 0);
+    servo_set_angle(R2, 0); 
+    servo_set_angle(L1, 0);
+    servo_set_angle(L2, 0);
     button_init();
     motor_control_init();               // 电机控制初始化
     cascade_init();                     // 滤波链初始化
@@ -449,25 +513,25 @@ void zrun_test_balance_wireless_uart(void)
     }
     pit_ms_init( PIT_CH10, 1 );          // pit通道10初始化，周期中断时间1ms
     while(true){
-        //printf("%d,%d,%d,%d,%d,%d,%f\r\n", imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z,cascade_value.cascade_common_value.filtered_value);
+        //air_printf("%d,%d,%d,%d,%d,%d,%f\r\n", imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z,cascade_value.cascade_common_value.filtered_value);
         air_printf("speed:%d target:%f\r\n mechanical_offset:%d", car_speed, target_speed, cascade_value.cascade_common_value.mechanical_offset);
         printf("speed:%d target:%f\r\n", car_speed, target_speed);
         //printf("%d,%d\r\n", motor_value.receive_left_speed_data, motor_value.receive_right_speed_data);
-        if(button_press(bt1)){
+        if(button_press(UP)){
             run_flag = true;
-            air_printf("bt1\r\n");  
+            air_printf("UP\r\n");  
         }
-        else if(button_press(bt2)){
+        else if(button_press(DOWN)){
             target_speed = 0.0f;
-            air_printf("bt2\r\n");
+            air_printf("DOWN\r\n");
         }
-        else if(button_press(bt3)){
+        else if(button_press(LEFT)){
             target_speed = 50.0f;
-            air_printf("bt3\r\n");
+            air_printf("LEFT\r\n");
         }
-        else if(button_press(bt4)){
+        else if(button_press(SE)){
             target_speed = -50.0f;
-            air_printf("bt4\r\n");
+            air_printf("SE\r\n");
         }
         system_delay_ms(100); 
 

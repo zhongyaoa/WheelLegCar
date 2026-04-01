@@ -53,11 +53,6 @@
 #include "zf_device_type.h"
 #include "zf_device_wireless_uart.h"
 
-ZF_WEAK void my_wireless_optimizer(uint8 data)
-{
-    (void)data;
-}
-
 static  fifo_struct                                     wireless_uart_fifo;
 static  uint8                                           wireless_uart_buffer[WIRELESS_UART_BUFFER_SIZE];
 
@@ -66,6 +61,11 @@ static          uint8                                   wireless_uart_data      
 static volatile wireless_uart_auto_baudrate_state_enum  wireless_auto_baud_flag     = WIRELESS_UART_AUTO_BAUD_RATE_INIT;
 static volatile uint8                                   wireless_auto_baud_data[3]  = {0x00, 0x01, 0x03};
 #endif
+
+ZF_WEAK void my_wireless_optimizer(uint8 data)
+{
+    (void)data;
+}
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     无线转串口模块 发送数据
@@ -204,7 +204,7 @@ void wireless_uart_callback (void)
     if(uart_query_byte(WIRELESS_UART_INDEX, &wireless_uart_data))
     {
         fifo_write_buffer(&wireless_uart_fifo, &wireless_uart_data, 1);
-        my_wireless_optimizer(wireless_uart_data); //test 3-15
+        my_wireless_optimizer(wireless_uart_data); //我的无线串口数据处理函数
     }
 #if WIRELESS_UART_AUTO_BAUD_RATE                                                // 开启自动波特率
     if(WIRELESS_UART_AUTO_BAUD_RATE_START == wireless_auto_baud_flag && 3 == fifo_used(&wireless_uart_fifo))
@@ -282,5 +282,3 @@ uint8 wireless_uart_init (void)
 #endif
     return return_state;
 }
-
-

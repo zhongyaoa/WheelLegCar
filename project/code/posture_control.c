@@ -15,10 +15,15 @@ void cascade_init(void){
     cascade_value.cascade_common_value.acc_ration = 4;    // 加速度置信度
     cascade_value.cascade_common_value.filtered_value = 0;  // 互补滤波后的值
     cascade_value.cascade_common_value.dt = 0.005f;          // 采样时间间隔
-    cascade_value.cascade_common_value.mechanical_offset = 667; //机械偏置:小车在-800(667)左右为平衡点
+    cascade_value.cascade_common_value.mechanical_offset = 545;
+    /*机械偏置：
+    舵机角度    机械偏置
+    0           600
+
+    */
 
     //角速度闭环控制结构体
-    cascade_value.angular_speed_cycle.kp = 0.43f;//0.43f
+    cascade_value.angular_speed_cycle.kp = 0.5f;//0.43f
     cascade_value.angular_speed_cycle.ki = 0.0f;
     cascade_value.angular_speed_cycle.kd = 0.0f;
 
@@ -28,8 +33,8 @@ void cascade_init(void){
     cascade_value.angle_cycle.kd = 0.0f;
 
     //速度闭环控制结构体
-    cascade_value.speed_cycle.kp = 5.2f; //0.2f
-    cascade_value.speed_cycle.ki = 0.05f;//0.0f
+    cascade_value.speed_cycle.kp = 2.0f; //0.2f
+    cascade_value.speed_cycle.ki = 0.0f;//0.0f
     cascade_value.speed_cycle.kd = 0.0f;
 
 }
@@ -70,7 +75,7 @@ void dynamic_motor_control(void)
         }
         left_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
         right_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
-        small_driver_set_duty(left_motor_duty,right_motor_duty);
+        small_driver_set_duty(-left_motor_duty,right_motor_duty); //4/010修改：电机反转
     }
     else{
         small_driver_set_duty(0,0);

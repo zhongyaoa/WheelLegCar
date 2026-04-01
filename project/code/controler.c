@@ -5,10 +5,12 @@
 
 
 void button_init(void){
-    gpio_init(BUTTON1, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY1 输入 默认高电平 上拉输入
-    gpio_init(BUTTON2, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY2 输入 默认高电平 上拉输入
-    gpio_init(BUTTON3, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY3 输入 默认高电平 上拉输入
-    gpio_init(BUTTON4, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY4 输入 默认高电平 上拉输入
+    gpio_init(BUTTON_UP, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY1 输入 默认高电平 上拉输入
+    gpio_init(BUTTON_DOWN, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY2 输入 默认高电平 上拉输入
+    gpio_init(BUTTON_LEFT, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY3 输入 默认高电平 上拉输入
+    gpio_init(BUTTON_NE, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY4 输入 默认高电平 上拉输入
+    gpio_init(BUTTON_SE, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY5 输入 默认高电平 上拉输入
+    gpio_init(BUTTON_SW, GPI, GPIO_HIGH, GPI_PULL_UP);               // 初始化 KEY6 输入 默认高电平 上拉输入
 }
 
 void led_init(void){
@@ -17,14 +19,18 @@ void led_init(void){
 
 bool button_press(Button bt){
     switch(bt){
-        case bt1:
-            return !gpio_get_level(BUTTON1);                       // 按键按下返回 true
-        case bt2:
-            return !gpio_get_level(BUTTON2);                       // 按键按下返回 true
-        case bt3:
-            return !gpio_get_level(BUTTON3);                       // 按键按下返回 true
-        case bt4:
-            return !gpio_get_level(BUTTON4);                       // 按键按下返回 true
+        case UP:
+            return !gpio_get_level(BUTTON_UP);                       // 按键按下返回 true
+        case DOWN:
+            return !gpio_get_level(BUTTON_DOWN);                     // 按键按下返回 true
+        case LEFT:
+            return !gpio_get_level(BUTTON_LEFT);                     // 按键按下返回 true
+        case NE:
+            return !gpio_get_level(BUTTON_NE);                       // 按键按下返回 true
+        case SE:
+            return !gpio_get_level(BUTTON_SE);                       // 按键按下返回 true
+        case SW:
+            return !gpio_get_level(BUTTON_SW);                       // 按键按下返回 true
         default:
             return false;
     }

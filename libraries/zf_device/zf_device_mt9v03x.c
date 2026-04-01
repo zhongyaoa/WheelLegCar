@@ -1,49 +1,49 @@
 ﻿/*********************************************************************************************************************
-* MM32F527X-E9P Opensource Library 鍗筹紙MM32F527X-E9P 寮€婧愬簱锛夋槸涓€涓熀浜庡畼鏂?SDK 鎺ュ彛鐨勭涓夋柟寮€婧愬簱
-* Copyright (c) 2022 SEEKFREE 閫愰绉戞妧
+* MM32F527X-E9P Opensource Library 即（MM32F527X-E9P 开源库）是一个基于官方 SDK 接口的第三方开源库
+* Copyright (c) 2022 SEEKFREE 逐飞科技
 * 
-* 鏈枃浠舵槸 MM32F527X-E9P 寮€婧愬簱鐨勪竴閮ㄥ垎
+* 本文件是 MM32F527X-E9P 开源库的一部分
 * 
-* MM32F527X-E9P 寮€婧愬簱 鏄厤璐硅蒋浠?
-* 鎮ㄥ彲浠ユ牴鎹嚜鐢辫蒋浠跺熀閲戜細鍙戝竷鐨?GPL锛圙NU General Public License锛屽嵆 GNU閫氱敤鍏叡璁稿彲璇侊級鐨勬潯娆?
-* 鍗?GPL 鐨勭3鐗堬紙鍗?GPL3.0锛夋垨锛堟偍閫夋嫨鐨勶級浠讳綍鍚庢潵鐨勭増鏈紝閲嶆柊鍙戝竷鍜?鎴栦慨鏀瑰畠
+* MM32F527X-E9P 开源库 是免费软件
+* 您可以根据自由软件基金会发布的 GPL（GNU General Public License，即 GNU通用公共许可证）的条款
+* 即 GPL 的第3版（即 GPL3.0）或（您选择的）任何后来的版本，重新发布和/或修改它
 * 
-* 鏈紑婧愬簱鐨勫彂甯冩槸甯屾湜瀹冭兘鍙戞尌浣滅敤锛屼絾骞舵湭瀵瑰叾浣滀换浣曠殑淇濊瘉
-* 鐢氳嚦娌℃湁闅愬惈鐨勯€傞攢鎬ф垨閫傚悎鐗瑰畾鐢ㄩ€旂殑淇濊瘉
-* 鏇村缁嗚妭璇峰弬瑙?GPL
+* 本开源库的发布是希望它能发挥作用，但并未对其作任何的保证
+* 甚至没有隐含的适销性或适合特定用途的保证
+* 更多细节请参见 GPL
 * 
-* 鎮ㄥ簲璇ュ湪鏀跺埌鏈紑婧愬簱鐨勫悓鏃舵敹鍒颁竴浠?GPL 鐨勫壇鏈?
-* 濡傛灉娌℃湁锛岃鍙傞槄<https://www.gnu.org/licenses/>
+* 您应该在收到本开源库的同时收到一份 GPL 的副本
+* 如果没有，请参阅<https://www.gnu.org/licenses/>
 * 
-* 棰濆娉ㄦ槑锛?
-* 鏈紑婧愬簱浣跨敤 GPL3.0 寮€婧愯鍙瘉鍗忚 浠ヤ笂璁稿彲鐢虫槑涓鸿瘧鏂囩増鏈?
-* 璁稿彲鐢虫槑鑻辨枃鐗堝湪 libraries/doc 鏂囦欢澶逛笅鐨?GPL3_permission_statement.txt 鏂囦欢涓?
-* 璁稿彲璇佸壇鏈湪 libraries 鏂囦欢澶逛笅 鍗宠鏂囦欢澶逛笅鐨?LICENSE 鏂囦欢
-* 娆㈣繋鍚勪綅浣跨敤骞朵紶鎾湰绋嬪簭 浣嗕慨鏀瑰唴瀹规椂蹇呴』淇濈暀閫愰绉戞妧鐨勭増鏉冨０鏄庯紙鍗虫湰澹版槑锛?
+* 额外注明：
+* 本开源库使用 GPL3.0 开源许可证协议 以上许可申明为译文版本
+* 许可申明英文版在 libraries/doc 文件夹下的 GPL3_permission_statement.txt 文件中
+* 许可证副本在 libraries 文件夹下 即该文件夹下的 LICENSE 文件
+* 欢迎各位使用并传播本程序 但修改内容时必须保留逐飞科技的版权声明（即本声明）
 * 
-* 鏂囦欢鍚嶇О          zf_device_mt9v03x
-* 鍏徃鍚嶇О          鎴愰兘閫愰绉戞妧鏈夐檺鍏徃
-* 鐗堟湰淇℃伅          鏌ョ湅 libraries/doc 鏂囦欢澶瑰唴 version 鏂囦欢 鐗堟湰璇存槑
-* 寮€鍙戠幆澧?         IAR 9.40.1
-* 閫傜敤骞冲彴          CYT2BL3
-* 搴楅摵閾炬帴          https://seekfree.taobao.com/
+* 文件名称          zf_device_mt9v03x
+* 公司名称          成都逐飞科技有限公司
+* 版本信息          查看 libraries/doc 文件夹内 version 文件 版本说明
+* 开发环境          IAR 9.40.1
+* 适用平台          CYT2BL3
+* 店铺链接          https://seekfree.taobao.com/
 * 
-* 淇敼璁板綍
-* 鏃ユ湡              浣滆€?               澶囨敞
+* 修改记录
+* 日期              作者                备注
 * 2024-11-19       pudding            first version
 ********************************************************************************************************************/
 /*********************************************************************************************************************
-* 鎺ョ嚎瀹氫箟锛?
+* 接线定义：
 *                   ------------------------------------
-*                   妯″潡绠¤剼            鍗曠墖鏈虹鑴?
-*                   TXD                 鏌ョ湅 zf_device_mt9v03x.h 涓?MT9V03X_COF_UART_TX 瀹忓畾涔?
-*                   RXD                 鏌ョ湅 zf_device_mt9v03x.h 涓?MT9V03X_COF_UART_RX 瀹忓畾涔?
-*                   PCLK                鏌ョ湅 zf_device_mt9v03x.h 涓?MT9V03X_PCLK_PIN 瀹忓畾涔?
-*                   VSY                 鏌ョ湅 zf_device_mt9v03x.h 涓?MT9V03X_VSYNC_PIN 瀹忓畾涔?
-*                   D0-D7               鏌ョ湅 zf_device_mt9v03x.h 涓?MT9V03X_DATA_PIN 瀹忓畾涔?浠庤瀹氫箟寮€濮嬬殑杩炵画鍏釜寮曡剼
-*                   VCC                 3.3V鐢垫簮
-*                   GND                 鐢垫簮鍦?
-*                   鍏朵綑寮曡剼鎮┖
+*                   模块管脚            单片机管脚
+*                   TXD                 查看 zf_device_mt9v03x.h 中 MT9V03X_COF_UART_TX 宏定义
+*                   RXD                 查看 zf_device_mt9v03x.h 中 MT9V03X_COF_UART_RX 宏定义
+*                   PCLK                查看 zf_device_mt9v03x.h 中 MT9V03X_PCLK_PIN 宏定义
+*                   VSY                 查看 zf_device_mt9v03x.h 中 MT9V03X_VSYNC_PIN 宏定义
+*                   D0-D7               查看 zf_device_mt9v03x.h 中 MT9V03X_DATA_PIN 宏定义 从该定义开始的连续八个引脚
+*                   VCC                 3.3V电源
+*                   GND                 电源地
+*                   其余引脚悬空
 *                   ------------------------------------
 ********************************************************************************************************************/
 
@@ -55,12 +55,12 @@
 #include "zf_device_config.h"
 #include "zf_device_mt9v03x.h"
 
-vuint8 mt9v03x_finish_flag = 0;                                                 // 涓€鍦哄浘鍍忛噰闆嗗畬鎴愭爣蹇椾綅
+vuint8 mt9v03x_finish_flag = 0;                                                 // 一场图像采集完成标志位
 uint8 mt9v03x_image[MT9V03X_H][MT9V03X_W];     
 
 static uint8 perfect_proportion = 0;
 
-#pragma location = 0x28026024                                                   // 灏嗕笅闈㈣繖涓暟缁勫畾涔夊埌鎸囧畾鐨凴AM鍦板潃
+#pragma location = 0x28026024                                                   // 将下面这个数组定义到指定的RAM地址
 __no_init uint8  mt9v03x_image_temp[MT9V03X_H][MT9V03X_W];                      
 #pragma location = 0x28006bf0
 __no_init uint16 mt9v03x_h_num;
@@ -81,7 +81,7 @@ void camera_finish_callback(void)
 static void mt9v03x_trig_init(void)
 {   
     Cy_SysClk_PeriphAssignDivider(PCLK_TCPWM0_CLOCKS59, (cy_en_divider_types_t)CY_SYSCLK_DIV_16_BIT, 0ul);
-    Cy_SysClk_PeriphSetDivider(Cy_SysClk_GetClockGroup(PCLK_TCPWM0_CLOCKS59), (cy_en_divider_types_t)CY_SYSCLK_DIV_16_BIT, 0ul, 9u); // 80Mhz鏃堕挓琚?0鍒嗛涓?Mhz
+    Cy_SysClk_PeriphSetDivider(Cy_SysClk_GetClockGroup(PCLK_TCPWM0_CLOCKS59), (cy_en_divider_types_t)CY_SYSCLK_DIV_16_BIT, 0ul, 9u); // 80Mhz时钟被10分频为8Mhz
     Cy_SysClk_PeriphEnableDivider(Cy_SysClk_GetClockGroup(PCLK_TCPWM0_CLOCKS59), (cy_en_divider_types_t)CY_SYSCLK_DIV_16_BIT, 0ul);
 
     cy_stc_sysint_irq_t mt9v03x_trig_irq_cfg;
@@ -92,7 +92,7 @@ static void mt9v03x_trig_init(void)
 
     cy_stc_tcpwm_counter_config_t tcpwm_camera_config;
     memset(&tcpwm_camera_config, 0, sizeof(tcpwm_camera_config));
-    tcpwm_camera_config.period             = 0x0                                ;        // pit鍛ㄦ湡璁＄畻
+    tcpwm_camera_config.period             = 0x0                                ;        // pit周期计算
     tcpwm_camera_config.clockPrescaler     = CY_TCPWM_PRESCALER_DIVBY_1         ;
     tcpwm_camera_config.runMode            = CY_TCPWM_COUNTER_ONESHOT           ; 
     tcpwm_camera_config.countDirection     = CY_TCPWM_COUNTER_COUNT_UP          ;
@@ -110,13 +110,13 @@ static void mt9v03x_trig_init(void)
 
 
 //-------------------------------------------------------------------------------------------------------------------
-// 鍑芥暟绠€浠?    鍗曠嫭璁剧疆鎽勫儚澶存洕鍏夋椂闂?
-// 鍙傛暟璇存槑     light           璁惧畾鏇濆厜鏃堕棿
-// 杩斿洖鍙傛暟     uint8           1-澶辫触 0-鎴愬姛
-// 浣跨敤绀轰緥     mt9v03x_set_exposure_time(100);                 // 璋冪敤璇ュ嚱鏁板墠璇峰厛鍒濆鍖栦覆鍙?
-// 澶囨敞淇℃伅     璁剧疆鏇濆厜鏃堕棿瓒婂ぇ鍥惧儚瓒婁寒
-//              鎽勫儚澶存敹鍒板悗浼氭牴鎹垎杈ㄧ巼鍙奆PS璁＄畻鏈€澶ф洕鍏夋椂闂村鏋滆缃殑鏁版嵁杩囧ぇ
-//              閭ｄ箞鎽勫儚澶村皢浼氳缃繖涓渶澶у€?
+// 函数简介     单独设置摄像头曝光时间
+// 参数说明     light           设定曝光时间
+// 返回参数     uint8           1-失败 0-成功
+// 使用示例     mt9v03x_set_exposure_time(100);                 // 调用该函数前请先初始化串口
+// 备注信息     设置曝光时间越大图像越亮
+//              摄像头收到后会根据分辨率及FPS计算最大曝光时间如果设置的数据过大
+//              那么摄像头将会设置这个最大值
 //-------------------------------------------------------------------------------------------------------------------
 uint8 mt9v03x_set_exposure_time (uint16 light)
 {
@@ -129,11 +129,11 @@ uint8 mt9v03x_set_exposure_time (uint16 light)
 
 
 //-------------------------------------------------------------------------------------------------------------------
-// 鍑芥暟绠€浠?    MT9V03X SCCB 鍒濆鍖?
-// 鍙傛暟璇存槑     void
-// 杩斿洖鍙傛暟     uint8           0-鎴愬姛 x-澶辫触
-// 浣跨敤绀轰緥     mt9v03x_sccb_init();
-// 澶囨敞淇℃伅     
+// 函数简介     MT9V03X SCCB 初始化
+// 参数说明     void
+// 返回参数     uint8           0-成功 x-失败
+// 使用示例     mt9v03x_sccb_init();
+// 备注信息     
 //-------------------------------------------------------------------------------------------------------------------
 uint8 mt9v03x_sccb_init (void)
 {
@@ -148,20 +148,20 @@ uint8 mt9v03x_sccb_init (void)
     
     if(!mt9v03x_sccb_check_id(&mt9v03x_iic_struct))
     {
-        // 闇€瑕侀厤缃埌鎽勫儚澶寸殑鏁版嵁 涓嶅厑璁稿湪杩欎慨鏀瑰弬鏁?
+        // 需要配置到摄像头的数据 不允许在这修改参数
         const int16 mt9v03x_set_confing_buffer[MT9V03X_CONFIG_FINISH][2]=
         {
-            {MT9V03X_INIT,              0},                                     // 鎽勫儚澶村紑濮嬪垵濮嬪寲
+            {MT9V03X_INIT,              0},                                     // 摄像头开始初始化
 
-            {MT9V03X_AUTO_EXP,          MT9V03X_AUTO_EXP_DEF},                  // 鑷姩鏇濆厜璁剧疆
-            {MT9V03X_EXP_TIME,          MT9V03X_EXP_TIME_DEF},                  // 鏇濆厜鏃堕棿
-            {MT9V03X_FPS,               MT9V03X_FPS_DEF},                       // 鍥惧儚甯х巼
-            {MT9V03X_SET_COL,           MT9V03X_W * (perfect_proportion + 1)},  // 鍥惧儚鍒楁暟閲?
-            {MT9V03X_SET_ROW,           MT9V03X_H * (perfect_proportion + 1)},  // 鍥惧儚琛屾暟閲?
-            {MT9V03X_LR_OFFSET,         MT9V03X_LR_OFFSET_DEF},                 // 鍥惧儚宸﹀彸鍋忕Щ閲?
-            {MT9V03X_UD_OFFSET,         MT9V03X_UD_OFFSET_DEF},                 // 鍥惧儚涓婁笅鍋忕Щ閲?
-            {MT9V03X_GAIN,              MT9V03X_GAIN_DEF},                      // 鍥惧儚澧炵泭
-            {MT9V03X_PCLK_MODE,         MT9V03X_PCLK_MODE_DEF},                 // 鍍忕礌鏃堕挓妯″紡
+            {MT9V03X_AUTO_EXP,          MT9V03X_AUTO_EXP_DEF},                  // 自动曝光设置
+            {MT9V03X_EXP_TIME,          MT9V03X_EXP_TIME_DEF},                  // 曝光时间
+            {MT9V03X_FPS,               MT9V03X_FPS_DEF},                       // 图像帧率
+            {MT9V03X_SET_COL,           MT9V03X_W * (perfect_proportion + 1)},  // 图像列数量
+            {MT9V03X_SET_ROW,           MT9V03X_H * (perfect_proportion + 1)},  // 图像行数量
+            {MT9V03X_LR_OFFSET,         MT9V03X_LR_OFFSET_DEF},                 // 图像左右偏移量
+            {MT9V03X_UD_OFFSET,         MT9V03X_UD_OFFSET_DEF},                 // 图像上下偏移量
+            {MT9V03X_GAIN,              MT9V03X_GAIN_DEF},                      // 图像增益
+            {MT9V03X_PCLK_MODE,         MT9V03X_PCLK_MODE_DEF},                 // 像素时钟模式
         };
         return_state = mt9v03x_sccb_set_config(mt9v03x_set_confing_buffer);
     }
@@ -170,11 +170,11 @@ uint8 mt9v03x_sccb_init (void)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// 鍑芥暟绠€浠?    MT9V03X 鎽勫儚澶村垵濮嬪寲
-// 鍙傛暟璇存槑     void
-// 杩斿洖鍙傛暟     uint8           0-鎴愬姛 x-澶辫触
-// 浣跨敤绀轰緥     mt9v03x_init();
-// 澶囨敞淇℃伅     
+// 函数简介     MT9V03X 摄像头初始化
+// 参数说明     void
+// 返回参数     uint8           0-成功 x-失败
+// 使用示例     mt9v03x_init();
+// 备注信息     
 //-------------------------------------------------------------------------------------------------------------------
 uint8 mt9v03x_init (void)
 {
@@ -186,7 +186,7 @@ uint8 mt9v03x_init (void)
     mt9v03x_h_num = MT9V03X_H;
     mt9v03x_w_num = MT9V03X_W;
     
-    if(mt9v03x_h_num == 60 && mt9v03x_w_num == 94)      // 瀹岀編缂╁噺姣斾緥 鍙噰闆嗗埌瀹屾暣姣斾緥鍥惧儚
+    if(mt9v03x_h_num == 60 && mt9v03x_w_num == 94)      // 完美缩减比例 可采集到完整比例图像
     {
         perfect_proportion = 1;
     }
@@ -209,5 +209,3 @@ uint8 mt9v03x_init (void)
     
     return return_state;
 }
-
-
