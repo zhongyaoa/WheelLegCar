@@ -1,140 +1,227 @@
 #include "posture_control.h"
 
-uint32 system_count = 0;//系统计数器
-bool run_flag = false;
-cascade_value_struct cascade_value;
-int16 car_speed = 0;
-float target_speed = 0.0f; // 目标速度，可以通过串口调参修改        
-
-//******串级控制器初始化 */
-void cascade_init(void){
-    //一阶互补滤波
-    cascade_value.cascade_common_value.gyro_raw_data_l = &imu660ra_gyro_x;
-    cascade_value.cascade_common_value.acc_raw_data_l = &imu660ra_acc_y;
-    cascade_value.cascade_common_value.gyro_ration = -4;   // 角速度置信度
-    cascade_value.cascade_common_value.acc_ration = 4;    // 加速度置信度
-    cascade_value.cascade_common_value.filtered_value = 0;  // 互补滤波后的值
-    cascade_value.cascade_common_value.dt = 0.005f;          // 采样时间间隔
-    cascade_value.cascade_common_value.mechanical_offset = 545;
-    /*机械偏置：
-    舵机角度    机械偏置
-    0           600
-
-    */
-
-    //角速度闭环控制结构体
-    cascade_value.angular_speed_cycle.kp = 0.5f;//0.43f
-    cascade_value.angular_speed_cycle.ki = 0.0f;
-    cascade_value.angular_speed_cycle.kd = 0.0f;
-
-    //角度闭环控制结构体
-    cascade_value.angle_cycle.kp = 10.4f;//10.4f
-    cascade_value.angle_cycle.ki = 0.0f;
-    cascade_value.angle_cycle.kd = 0.0f;
-
-    //速度闭环控制结构体
-    cascade_value.speed_cycle.kp = 2.0f; //0.2f
-    cascade_value.speed_cycle.ki = 0.0f;//0.0f
-    cascade_value.speed_cycle.kd = 0.0f;
-
-}
-
-//获取IMU数据,并初步处理
-void imu_data_get(void)
+//=============================================================================
+// 函数简介     计算并更新车辆状态标志
+// 返回参数     void
+// 使用示例     car_state_calculate();
+// 备注信息     根据横滚角、转向电流、实际距离等参数切换车辆悬挂状态和运行状态，同时处理 PID 参数的渐变
+//=============================================================================
+void car_state_calculate(void)
 {
-    imu660ra_get_acc();
-    imu660ra_get_gyro();
-    
-    imu660ra_gyro_x = imu660ra_gyro_x - 4;//陀螺仪x零偏校准
-    imu660ra_gyro_y = imu660ra_gyro_y + 6;//陀螺仪y零偏校准
-    //imu660ra_gyro_z = imu660ra_gyro_z + 6;
-
-    if(func_abs(imu660ra_gyro_x) <= 5)
+    if(func_abs(roll_balance_cascade.posture_value.rol) > 40.0f || func_abs(roll_balance_cascade.posture_value.pit) > 40.0f) 
+    // 当横滚角与俯仰角绝对值大于 40 度时，认为小车倾倒
     {
-        imu660ra_gyro_x = 0;
+        jump_flag = 0;
+        run_state = 0;                              // 停止运行
+        roll_balance_cascade.angular_speed_cycle.i_value = 0;  // 重置角速度环 PID 积分值
+        pitch_balance_cascade.angle_cycle.i_value = 0;
     }
-    if(func_abs(imu660ra_gyro_y) <= 5)
+    else
     {
-        imu660ra_gyro_y = 0;
-    }
-    if(func_abs(imu660ra_gyro_z) <= 5)
-    {
-        imu660ra_gyro_z = 0;
-    }
-}
-
-//动态电机控制函数
-void dynamic_motor_control(void)
-{
-    int16 left_motor_duty;
-    int16 right_motor_duty;
-    if(run_flag){
-        if(cascade_value.cascade_common_value.filtered_value > 2000 || cascade_value.cascade_common_value.filtered_value < -2000){
-            small_driver_set_duty(0,0);
-            run_flag = false;
+        if(run_state == 0)
+        {
+            sys_times = 0;
+            run_state = 1;
         }
-        left_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
-        right_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
-        small_driver_set_duty(-left_motor_duty,right_motor_duty); //4/010修改：新的无刷双驱板没有区分左右电机，输入正值都为顺时针转动，左右电机对称安装，所以左电机输入取反
     }
-    else{
-        small_driver_set_duty(0,0);
-    }      
+
+    if(sys_times == 10000)
+    {
+        jump_flag = 1;
+    }
+
+    if(sys_times < 500)                                      // 系统计时小于 500 时，PID 参数从 20% 渐变到 100%
+    {
+        // 角度环 P 参数渐变 (0.2 到 1.0 倍原始值)
+        roll_balance_cascade.angle_cycle.p = roll_balance_cascade_resave.angle_cycle.p * (0.2 + (float)sys_times / 500.0f * 0.8f);
+        // 速度环 P 参数渐变 (0.2 到 1.0 倍原始值)
+        roll_balance_cascade.speed_cycle.p = roll_balance_cascade_resave.speed_cycle.p * (0.2 + (float)sys_times / 500.0f * 0.8f);
+
+        roll_balance_cascade.angle_cycle.i_value = 0;         // 重置角度环积分值
+    }
+    else                                                      // 系统计时大于等于 500 时，使用原始 PID 参数
+    {
+        roll_balance_cascade.angle_cycle.p = roll_balance_cascade_resave.angle_cycle.p;  // 恢复角度环 P 参数
+        roll_balance_cascade.speed_cycle.p = roll_balance_cascade_resave.speed_cycle.p;  // 恢复速度环 P 参数
+    }
+
+    if(jump_flag)
+    {
+        roll_balance_cascade.angle_cycle.p = roll_balance_cascade_resave.angle_cycle.p * 0.5f;
+        roll_balance_cascade.speed_cycle.p = roll_balance_cascade_resave.speed_cycle.p * 0.5f;
+
+        roll_balance_cascade.angle_cycle.i_value = 0;         // 重置角速度环 PID 积分值
+        pitch_balance_cascade.angle_cycle.i_value = 0;
+    }
 }
 
-//1ms中断回调函数:pit_ch10
-void pit_isr_callback(void)
+//=============================================================================
+// 函数简介     车辆舵机控制
+// 返回参数     void
+// 使用示例     car_steer_control();
+// 备注信息     控制跳跃、左右倾斜、腿部前后倾斜、自动复位等操作
+//=============================================================================
+void car_steer_control(void)
 {
-    // PIT中断回调函数的实现
-    system_count++;
-    imu_data_get();
+    int16 steer_location_offset[4] = {0};
+    int16 steer_target_offset[4] = {0};
 
-    if(system_count % 20 ==0){
-        small_driver_get_speed();
-        car_speed = (motor_value.receive_left_speed_data + motor_value.receive_right_speed_data)/2;
-        //pid_control_pd(&cascade_value.speed_cycle,0.0f,car_speed);
-        pid_control_pd(&cascade_value.speed_cycle,0,car_speed);
+    static int16 jump_time_num[4] = {110, 110, 30, 100};  // 跳跃各阶段时间  起跳、收腿、准备缓冲、执行缓冲
+
+    static float steer_balance_angle_count = 0;
+    static float steer_output_duty_filter = 0;
+
+    int16 steer_output_duty = 0;
+    float steer_balance_angle = 0;
+
+    float pitch_offset = (30.0f - func_limit_ab(func_abs(roll_balance_cascade.posture_value.rol + roll_balance_cascade.posture_value.mechanical_zero), 0.0f, 30.0f)) / 30.0f; // 前倾角度偏移量，范围 0~1，前倾越大偏移越小
+    steer_output_duty = func_limit_ab((int16)(roll_balance_cascade.speed_cycle.out / 7.0f), -250, 250) * 6;
+    steer_output_duty = (int16)((float)steer_output_duty * pitch_offset);
+
+    steer_output_duty_filter = (steer_output_duty_filter * 19 + (float)steer_output_duty) / 20.0f;
+    if(jump_flag == 0)
+    {
+        if(sys_times < 2000)
+        {
+            steer_balance_angle = 0;
+            pitch_balance_cascade.angle_cycle.i_value = 0;
+        }
+        else
+        {
+            steer_balance_angle = func_limit_ab(pitch_balance_cascade.angle_cycle.out, -300, 300) * 6;
+        }
+        steer_balance_angle_count = steer_balance_angle;
     }
 
+    steer_location_offset[0] = (steer_1.now_location - steer_1.center_num) * steer_1.steer_dir;
+    steer_location_offset[1] = (steer_2.now_location - steer_2.center_num) * steer_2.steer_dir;
+    steer_location_offset[2] = (steer_3.now_location - steer_3.center_num) * steer_3.steer_dir;
+    steer_location_offset[3] = (steer_4.now_location - steer_4.center_num) * steer_4.steer_dir;
 
-    if(system_count % 5 ==0){//每5ms执行一次互补滤波和角度pid
-        first_order_complementary_filter(&cascade_value.cascade_common_value,*(cascade_value.cascade_common_value.gyro_raw_data_l),*(cascade_value.cascade_common_value.acc_raw_data_l));
-        pid_control_pd(&cascade_value.angle_cycle,-cascade_value.speed_cycle.out,cascade_value.cascade_common_value.filtered_value);
+    steer_target_offset[0] = (int16)( steer_output_duty_filter - (steer_balance_angle_count > 0 ? 0 : steer_balance_angle_count));
+    steer_target_offset[1] = (int16)( steer_output_duty_filter + (steer_balance_angle_count < 0 ? 0 : steer_balance_angle_count));
+    steer_target_offset[2] = (int16)(-steer_output_duty_filter - (steer_balance_angle_count > 0 ? 0 : steer_balance_angle_count));
+    steer_target_offset[3] = (int16)(-steer_output_duty_filter + (steer_balance_angle_count < 0 ? 0 : steer_balance_angle_count));
+
+    if(run_state == 1)
+    {
+        if(jump_flag == 0)
+        {
+            steer_control(&steer_1, func_limit_ab(steer_target_offset[0] - steer_location_offset[0], -10, 10));
+            steer_control(&steer_2, func_limit_ab(steer_target_offset[1] - steer_location_offset[1], -10, 10));
+            steer_control(&steer_3, func_limit_ab(steer_target_offset[2] - steer_location_offset[2], -10, 10));
+            steer_control(&steer_4, func_limit_ab(steer_target_offset[3] - steer_location_offset[3], -10, 10));
+        }
+        else
+        {
+            jump_time ++;
+            if(jump_time < jump_time_num[0])                  // 起跳
+            {
+                jump_flag = 1;
+                steer_duty_set(&steer_1, steer_1.center_num + 2500);
+                steer_duty_set(&steer_2, steer_2.center_num - 2500);
+                steer_duty_set(&steer_3, steer_3.center_num - 2500);
+                steer_duty_set(&steer_4, steer_4.center_num + 2500);
+            }
+            else if(jump_time < (jump_time_num[0] + jump_time_num[1]))  // 收脚
+            {
+                jump_flag = 2;
+                steer_duty_set(&steer_1, steer_1.center_num);
+                steer_duty_set(&steer_2, steer_2.center_num);
+                steer_duty_set(&steer_3, steer_3.center_num);
+                steer_duty_set(&steer_4, steer_4.center_num);
+            }
+            else if(jump_time < (jump_time_num[0] + jump_time_num[1] + jump_time_num[2]))  // 预备缓冲
+            {
+                jump_flag = 3;
+                steer_duty_set(&steer_1, steer_1.center_num + 1400);
+                steer_duty_set(&steer_2, steer_2.center_num - 1400);
+                steer_duty_set(&steer_3, steer_3.center_num - 1400);
+                steer_duty_set(&steer_4, steer_4.center_num + 1400);
+            }
+            else if(jump_time < (jump_time_num[0] + jump_time_num[1] + jump_time_num[2] + jump_time_num[3]))  // 预备缓冲
+            {
+                jump_flag = 4;
+                steer_duty_set(&steer_1, -14);
+                steer_duty_set(&steer_2, -14);
+                steer_duty_set(&steer_3, -14);
+                steer_duty_set(&steer_4, -14);
+            }
+            else
+            {
+                jump_flag = 0;
+                jump_time = 0;
+            }
+        }
     }
-    pid_control_pd(&cascade_value.angular_speed_cycle,(-cascade_value.angle_cycle.out),*(cascade_value.cascade_common_value.gyro_raw_data_l));
-    dynamic_motor_control();
+    else
+    {
+        steer_control(&steer_1, func_limit_ab(steer_1.center_num - steer_1.now_location, -1, 1) * steer_1.steer_dir);
+        steer_control(&steer_2, func_limit_ab(steer_2.center_num - steer_2.now_location, -1, 1) * steer_2.steer_dir);
+        steer_control(&steer_3, func_limit_ab(steer_3.center_num - steer_3.now_location, -1, 1) * steer_3.steer_dir);
+        steer_control(&steer_4, func_limit_ab(steer_4.center_num - steer_4.now_location, -1, 1) * steer_4.steer_dir);
+    }
 }
 
-//*********一阶互补滤波*************
-void first_order_complementary_filter(cascade_common_value_struct* filter,int16 gyro_raw_data,int16 acc_raw_data){
-    float gyro_temp;
-    float acc_temp;
+void pit_call_back(void)
+{
+    sys_times ++;                                      // 系统计时自增
 
-    gyro_temp = gyro_raw_data * filter->gyro_ration; //角速度*角速度置信度
-    acc_temp = (acc_raw_data-filter->temp_value) * filter->acc_ration;    //加速度*加速度置信度gyro
-    filter->temp_value += ((gyro_temp + acc_temp) * filter->dt); //互补滤波计算
-    filter->filtered_value = filter->temp_value + filter->mechanical_offset; //加上机械偏置
+    for(int i = 0; i < 20; i ++)
+    {
+        system_time_state[i] = (sys_times % (i + 1) == 0 ? 1 : system_time_state[i]);
+    }
+
+    imu660ra_get_gyro();                               // 获取 IMU660RA 陀螺仪数据
+    imu660ra_get_acc();                                // 获取 IMU660RA 加速度计数据
+    quaternion_module_calculate(&roll_balance_cascade); // 计算四元数，更新姿态数据
+
+    if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
+    {
+        car_speed = (motor_value.receive_left_speed_data - motor_value.receive_right_speed_data) / 2;  // 计算车辆速度：左右电机速度差的一半
+        pid_control(&roll_balance_cascade.speed_cycle, target_speed, (float)car_speed);  // 速度环 PID 控制，目标值为 0.0 f
+    }
+
+    if(sys_times % 5 == 0)                             // 每 5 个周期执行一次
+    {
+        // 角度环 PID 控制，目标值为速度环输出减去机械零点
+        pid_control(&roll_balance_cascade.angle_cycle, 0.0f - roll_balance_cascade.posture_value.mechanical_zero, roll_balance_cascade.posture_value.rol);
+
+        // 角度环 PID 控制，目标值为速度环输出减去机械零点（俯仰轴，原代码注释保留）
+        pid_control(&pitch_balance_cascade.angle_cycle, 0.0f - pitch_balance_cascade.posture_value.mechanical_zero, roll_balance_cascade.posture_value.pit);
+    }
+
+    // 角速度环 PID 控制，目标值为角度环输出，当前值为 X 轴陀螺仪数据
+    pid_control(&roll_balance_cascade.angular_speed_cycle, roll_balance_cascade.angle_cycle.out, imu660ra_gyro_x);
+
+    car_state_calculate();                             // 检测车辆状态
+    car_steer_control();                                // 车辆舵机控制
+    car_motor_control();                                // 车辆电机控制
 }
 
+//=============================================================================
+// 函数简介     车辆电机占空比控制
+// 返回参数     void
+// 使用示例     car_motor_control();
+// 备注信息     根据运行标志控制左右电机的占空比，通过限幅函数限制输出范围，最终设置电机驱动
+//=============================================================================
+void car_motor_control(void)
+{
+    car_distance += ((float)car_speed / 60.0f * WHEEL_CIRCUMFERENCE * PI * 0.001f);
 
-//**********PID控制器-PD************
-void pid_control_pd(pid_cycle_struct* pid_cycle,float target_value,float current_value){
-    float error;
-    float p_value;
-    float d_value;
-    
-    // 计算误差
-    error = target_value - current_value;
-    
-    // 计算比例项
-    p_value = pid_cycle->kp * error;
-    
-    // 计算微分项（基于比例项的变化）
-    d_value = pid_cycle->kd * (p_value - pid_cycle->p_value_last);
-    
-    // 保存当前比例项用于下次微分计算
-    pid_cycle->p_value_last = p_value;
-    
-    // 计算输出（PD控制器只有P和D项，没有I项）
-    pid_cycle->out = p_value + d_value;
+    if(run_state)                                      // 当运行状态为 1 时，计算电机占空比
+    {
+        left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 左电机占空比: 取角速度环输出，限幅
+        right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 右电机占空比: 取角速度环输出，限幅
+
+        left_motor_duty  = func_limit_ab(left_motor_duty  + imu660ra_gyro_z / 3,  -turn_duty_max,  turn_duty_max  );
+        right_motor_duty = func_limit_ab(right_motor_duty - imu660ra_gyro_z / 3,  -turn_duty_max,  turn_duty_max  );
+    }
+    else                                               // 当运行状态为 0 时，电机关闭
+    {
+        left_motor_duty  = 0;                         // 左电机占空比设为 0
+        right_motor_duty = 0;                         // 右电机占空比设为 0
+    }
+
+    small_driver_set_duty(-left_motor_duty, right_motor_duty);  // 设置驱动的电机占空比（左电机取反）
 }

@@ -207,8 +207,12 @@ void uart4_isr (void)
     if(uart_isr_mask(UART_4))            // 串口4接收中断
     {
 
-        uart_receiver_handler();                                                                // 串口接收机回调函数
-       
+        //uart_receiver_handler();                                                                // 串口接收机回调函数
+        uint8 dat;
+        if(uart_query_byte(UART_4, &dat))
+        {
+            uart_control_callback(dat);
+        }
     }
     else                                // 串口4发送中断
     {

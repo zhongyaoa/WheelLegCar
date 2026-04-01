@@ -1,55 +1,42 @@
 /*
-    姿态控制相关函数
-        -IMU数据获取
-        -互补滤波
-        -PID控制
-        -姿态闭环控制
+    姿态与车辆控制模块
+        - 车体状态计算
+        - 舵机控制
+        - 电机控制
+        - 周期回调
 */
 
 #ifndef _POSTURE_CONTROL_H_
 #define _POSTURE_CONTROL_H_
+
 #include "zf_common_headfile.h"
+//#include "balance_control.h"
+//#include "steer_control.h"
+//#include "small_driver_uart_control.h"
+#define WHEEL_CIRCUMFERENCE 200.0f // 假设轮子周长为200mm
 
-typedef struct{
-    int16* gyro_raw_data_l; //角速度原始数据的地址
-    int16* acc_raw_data_l;  //加速度原始数据的地址
-    float gyro_ration;  //角速度置信度
-    float acc_ration;   //加速度置信度
-    float dt;          //采样时间间隔
-    float temp_value; //临时变量
-    float filtered_value; //互补滤波后的值
-    int16 mechanical_offset; //机械偏置
-    
+// 车体运行状态变量
+extern uint32 sys_times;
+extern uint8 system_time_state[20];
 
-}cascade_common_value_struct;
+extern uint8 run_state;
+extern uint8 jump_flag;
+extern uint32 jump_time;
 
-typedef struct{
-    float kp;           // 比例系数
-    float ki;           // 积分系数
-    float kd;           // 微分系数
-    float i_value;      // 积分值
-    float i_value_max;  // 积分限幅
-    float out;          // 输出值
-    float p_value_last; // 上次比例项(用于微分计算)
-}pid_cycle_struct;
-
-typedef struct{
-    cascade_common_value_struct cascade_common_value; // 互补滤波结构体
-    pid_cycle_struct angular_speed_cycle; // 角速度闭环控制结构体
-    pid_cycle_struct angle_cycle;         // 角度闭环控制结构体
-    pid_cycle_struct speed_cycle;         // 速度闭环控制结构体
-}cascade_value_struct;
-
-extern uint32 system_count;//系统计数器
-extern cascade_value_struct cascade_value;
-extern bool run_flag;
+// 运动与电机控制变量
 extern int16 car_speed;
 extern float target_speed;
+extern float car_distance;
 
-void imu_data_get(void);
-void pit_isr_callback(void);
-void cascade_init(void);
-void first_order_complementary_filter(cascade_common_value_struct* filter,int16 gyro_raw_data,int16 acc_raw_data);
-void pid_control_pd(pid_cycle_struct* pid_cycle,float target_value,float current_value);
+extern int16 left_motor_duty;
+extern int16 right_motor_duty;
+extern int16 balance_duty_max;
+extern int16 turn_duty_max;
+
+// 车辆控制主流程
+void car_state_calculate(void);
+void car_steer_control(void);
+void car_motor_control(void);
+void pit_call_back(void);
 
 #endif

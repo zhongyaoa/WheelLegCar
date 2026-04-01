@@ -11,12 +11,12 @@ uint8 motor_init_ok = 0;
 // 使用示例     uart_control_callback(1000, -1000);
 // 备注信息     用于解析接收到的速度数据  该函数需要在对应的串口接收中断中调用
 //-------------------------------------------------------------------------------------------------------------------
-void uart_control_callback(void)
+void uart_control_callback(uint8 receive_data)
 {
-    uint8 receive_data;                                                                     // 定义临时变量
+    //uint8 receive_data;                                                                     // 定义临时变量
 
-    if(uart_query_byte(SMALL_DRIVER_UART, &receive_data))                                   // 接收串口数据
-    {
+    //if(uart_query_byte(SMALL_DRIVER_UART, &receive_data))                                   // 接收串口数据
+    //{
         if(receive_data == 0xA5 && motor_value.receive_data_buffer[0] != 0xA5)              // 判断是否收到帧头 并且 当前接收内容中是否正确包含帧头
         {
             motor_value.receive_data_count = 0;                                             // 未收到帧头或者未正确包含帧头则重新接收
@@ -69,7 +69,7 @@ void uart_control_callback(void)
                 memset(motor_value.receive_data_buffer, 0, 7);                              // 清除缓冲区数据
             }
         }
-    }
+    //}
 }
 
 //-------------------------------------------------------------------------------------------------------------------
