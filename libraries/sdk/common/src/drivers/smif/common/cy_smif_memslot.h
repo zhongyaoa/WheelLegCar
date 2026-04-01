@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_memslot.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`.1
 *
@@ -294,5 +294,3 @@ cy_en_smif_status_t Cy_SMIF_Memslot_CmdRead(cy_stc_smif_reg_t volatile *base,
 
 
 /* [] END OF FILE */
-
-

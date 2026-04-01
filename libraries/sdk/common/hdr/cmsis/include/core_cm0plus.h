@@ -1,4 +1,4 @@
-﻿/**************************************************************************//**
+/**************************************************************************//**
  * @file     core_cm0plus.h
  * @brief    CMSIS Cortex-M0+ Core Peripheral Access Layer Header File
  * @version  V5.0.9
@@ -1090,5 +1090,3 @@ __STATIC_INLINE uint32_t SysTick_Config(uint32_t ticks)
 #endif /* __CORE_CM0PLUS_H_DEPENDANT */
 
 #endif /* __CMSIS_GENERIC */
-
-

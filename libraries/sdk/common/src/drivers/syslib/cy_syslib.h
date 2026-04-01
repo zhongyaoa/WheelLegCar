@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_syslib.h
 * \version 1.0
 *
@@ -939,5 +939,3 @@ void Cy_SysLib_CleanInvalidateCoreDCacheByAddr(void *addr, int32_t dsize);
 /** \} group_syslib */
 
 /* [] END OF FILE */
-
-

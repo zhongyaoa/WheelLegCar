@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
  * @file     arm_vec_math.h
  * @brief    Public header file for CMSIS DSP Library
  * @version  V1.7.0
@@ -370,5 +370,3 @@ __STATIC_INLINE int32x4_t __arm_vec_sqrt_q31_neon(int32x4_t vec)
  *
  * End of file.
  */
-
-

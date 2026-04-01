@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -704,5 +704,3 @@ void soft_iic_init (soft_iic_info_struct *soft_iic_obj, uint8 addr, uint32 delay
     gpio_init(scl_pin, GPO, GPIO_HIGH, GPO_PUSH_PULL);                          // 提取对应IO索引 AF功能编码
     gpio_init(sda_pin, GPO, GPIO_HIGH, GPO_PUSH_PULL);                         // 提取对应IO索引 AF功能编码
 }
-
-

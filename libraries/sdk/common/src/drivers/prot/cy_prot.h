@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_prot.h
 * \version 1.0
 *
@@ -565,5 +565,3 @@ cy_en_prot_status_t Cy_Prot_DisableEmpuSlaveStruct(volatile stc_LPDDR4_EMPU_EMPU
 #endif
 
 #endif /* CY_PROT_H */
-
-

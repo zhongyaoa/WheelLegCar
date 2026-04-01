@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_adc.h
 * \version 1.0
 *
@@ -522,5 +522,3 @@ double Cy_Adc_CalculateDieTemperature(cy_stc_adc_temp_ref_t *refValue, cy_stc_ad
 /** \} group_adc */
 
 /* [] END OF FILE */
-
-

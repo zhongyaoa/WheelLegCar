@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -273,5 +273,3 @@
 #endif /* ( ipconfigUSE_DUMP_PACKETS != 0 ) */
 
 #endif /* UDP_TRACE_MACRO_DEFAULTS_H */
-
-

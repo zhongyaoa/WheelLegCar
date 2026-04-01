@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_dp83867.h
 *
 * \brief Driver for Ethernet PHY DP83867
@@ -345,8 +345,8 @@ typedef struct
     uint16_t u11CODE    : 11; /* Code:
                                  This field represents the code field of the next page transmission. If the MP bit is
                                  set (bit 13 of this register), then the code shall be interpreted as a "Message
-                                 Page鈥? as defined in annex 28C of IEEE 802.3u. Otherwise, the code shall be
-                                 interpreted as an "Unformatted Page鈥? and the interpretation is application
+                                 Page”, as defined in annex 28C of IEEE 802.3u. Otherwise, the code shall be
+                                 interpreted as an "Unformatted Page”, and the interpretation is application
                                  specific.
                                  The default value of the CODE represents a Null Page as defined in Annex 28C
                                  of IEEE 802.3u. */
@@ -387,9 +387,9 @@ typedef struct
     uint16_t u11CODE    : 11; /* Code:
                                  This field represents the code field of the next page transmission. If
                                  the MP bit is set (bit 13 of this register), then the code shall be
-                                 interpreted as a "Message Page鈥? as defined in Annex 28C of IEEE
+                                 interpreted as a "Message Page”, as defined in Annex 28C of IEEE
                                  802.3u. Otherwise, the code shall be interpreted as an "Unformatted
-                                 Page鈥? and the interpretation is application specific.
+                                 Page”, and the interpretation is application specific.
                                  The default value of the CODE represents a Null Page as defined in
                                  Annex 28C of IEEE 802.3u. */
     uint16_t u1TOG_TX  : 1; /* Toggle:
@@ -446,13 +446,13 @@ typedef struct
                                                           0 = Set PHY as SLAVE when register 09h bit 12 = 1.
                                                           Using the manual configuration feature may prevent the PHY from
                                                           establishing link in 1000Base-T mode if a conflict with the link
-                                                          partner鈥檚 setting exists. */
+                                                          partner’s setting exists. */
     uint16_t u1MASTER_SLAVE_MANUAL_CONFIGURATION  : 1; /* Enable Manual Master / Slave Configuration:
                                                           1 = Enable Manual Master/Slave Configuration control.
                                                           0 = Disable Manual Master/Slave Configuration control.
                                                           Using the manual configuration feature may prevent the PHY from
                                                           establishing link in 1000Base-T mode if a conflict with the link
-                                                          partner鈥檚 setting exists. */
+                                                          partner’s setting exists. */
     uint16_t u3TEST_MODE                          : 3; /* Test Mode Select:
                                                           111 = Test Mode 7 - Repetitive {Pulse, 63 zeros}
                                                           110 = Test Mode 6 - Repetitive 0001 sequence
@@ -1929,7 +1929,7 @@ typedef struct
                                           Output impedance approximate range from 35-70 [ohm] in 32 steps.
                                           Lowest being 11111 and highest being 00000. Range and Step size
                                           will vary with process.
-                                          Default is set to 50 惟 by trim. But the default register value can vary
+                                          Default is set to 50 Ω by trim. But the default register value can vary
                                           by process. Non default values of MAC I/O impedance can be used
                                           based on trace impedance. Mismatch between device and trace
                                           impedance can cause voltage overshoot and undershoot. */
@@ -2783,5 +2783,3 @@ extern void     Cy_Dp83867_ConfigurePhy(cy_stc_dp83867_phy_cfg_t * phyCfg, cy_st
 extern bool     Cy_Dp83867_IsLinkUp(cy_stc_dp83867_t* handle);
 
 #endif // __CY_DP83867_H__
-
-

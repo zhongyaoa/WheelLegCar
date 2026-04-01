@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -361,5 +361,3 @@
     }
 
 #endif /* configUSE_CO_ROUTINES == 0 */
-
-

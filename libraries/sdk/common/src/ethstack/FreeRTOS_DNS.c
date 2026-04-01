@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -1991,5 +1991,3 @@
 #ifdef FREERTOS_ENABLE_UNIT_TESTS
     #include "freertos_tcp_test_access_dns_define.h"
 #endif
-
-

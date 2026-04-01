@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -4121,5 +4121,3 @@
 #ifdef FREERTOS_TCP_ENABLE_VERIFICATION
     #include "aws_freertos_tcp_verification_access_tcp_define.h"
 #endif
-
-

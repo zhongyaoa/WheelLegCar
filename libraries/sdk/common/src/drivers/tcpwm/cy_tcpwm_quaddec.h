@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file tcpwm_quaddec.h
 * \version 1.0
 *
@@ -160,5 +160,3 @@ extern void Cy_Tcpwm_QuadDec_ClearCC1_Intr(volatile stc_TCPWM_GRP_CNT_t *ptscTCP
 
 
 /* [] END OF FILE */
-
-

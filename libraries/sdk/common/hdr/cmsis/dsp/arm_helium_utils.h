@@ -1,4 +1,4 @@
-﻿/* ----------------------------------------------------------------------
+/* ----------------------------------------------------------------------
  * Project:      CMSIS DSP Library
  * Title:        arm_helium_utils.h
  * Description:  Utility functions for Helium development
@@ -346,5 +346,3 @@ __STATIC_INLINE q15x8_t FAST_VSQRT_Q15(q15x8_t vecIn)
 #endif /* defined (ARM_MATH_HELIUM) || defined(ARM_MATH_MVEI) */
 
 #endif
-
-

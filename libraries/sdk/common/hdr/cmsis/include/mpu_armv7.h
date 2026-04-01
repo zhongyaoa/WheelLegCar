@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
  * @file     mpu_armv7.h
  * @brief    CMSIS MPU API for Armv7-M MPU
  * @version  V5.1.2
@@ -273,5 +273,3 @@ __STATIC_INLINE void ARM_MPU_Load(ARM_MPU_Region_t const* table, uint32_t cnt)
 }
 
 #endif
-
-

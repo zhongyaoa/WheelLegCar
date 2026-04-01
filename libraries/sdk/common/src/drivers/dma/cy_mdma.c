@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_mdma.c
 * \version 1.0
 *
@@ -426,5 +426,3 @@ void Cy_MDMA_Descr_SetNxtDescr(cy_stc_mdma_descr_t* descriptor, const cy_stc_mdm
 #endif
 
 /* [] END OF FILE */
-
-

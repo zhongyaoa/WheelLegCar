@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.3.2
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -31,5 +31,3 @@
 *****************************************************************************/
 
 __attribute__( ( packed ) );
-
-

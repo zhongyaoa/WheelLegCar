@@ -1,4 +1,4 @@
-﻿/* cy_smif_hb_flash.c - Source Code for Cypress's Low Level Driver */
+/* cy_smif_hb_flash.c - Source Code for Cypress's Low Level Driver */
 
 #ifdef __cplusplus
  extern "C" {
@@ -3825,5 +3825,3 @@ void CY_SMIF_HbFlash_EnterSPIModeCmd(volatile CY_SMIF_FLASHDATA* base_addr)
 #if defined(__cplusplus)
 }
 #endif
-
-

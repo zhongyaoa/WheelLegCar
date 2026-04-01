@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_device_common.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -386,5 +386,3 @@ cy_en_smif_status_t Cy_SMIF_TX_WRITE(volatile cy_stc_smif_reg_t *base,
 
 
 #endif // CY_SMIF_DEVICE_COMMON_H
-
-

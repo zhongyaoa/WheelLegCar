@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_ver_specific.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -387,5 +387,3 @@ extern cy_en_smif_status_t     Cy_SMIF_DeactivateRemapRegion(volatile cy_stc_smi
 
 
 /* [] END OF FILE */
-
-

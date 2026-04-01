@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_ethif.h
 * \version 1.0
 *
@@ -540,5 +540,3 @@ cy_en_ethif_status_t Cy_EthIf_SetPfcPriorityBasedPauseEnable(cy_pstc_eth_type_t 
 /** \} cy_ethif */
 
 /* [] END OF FILE */
-
-

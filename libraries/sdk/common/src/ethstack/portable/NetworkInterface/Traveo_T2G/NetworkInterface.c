@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -558,8 +558,8 @@ static void EthernetRxFrameCallback ( cy_pstc_eth_type_t pstcEth, uint8_t * u8Rx
             buffer large enough to hold the received data.  Copy the
             received data into pcNetworkBuffer->pucEthernetBuffer.  Here it
             is assumed ReceiveData() is a peripheral driver function that
-            copies the received data into a buffer passed in as the function鈥檚
-            parameter.  Remember! While is is a simple robust technique 鈥?
+            copies the received data into a buffer passed in as the function’s
+            parameter.  Remember! While is is a simple robust technique –
             it is not efficient.  An example that uses a zero copy technique
             is provided further down this page. */
             // ReceiveData( pxBufferDescriptor->pucEthernetBuffer );
@@ -571,7 +571,7 @@ static void EthernetRxFrameCallback ( cy_pstc_eth_type_t pstcEth, uint8_t * u8Rx
             /* See if the data contained in the received Ethernet frame needs
             to be processed.  NOTE! It is preferable to do this in
             the interrupt service routine itself, which would remove the need
-            to unblock this task for packets that don鈥檛 need processing. */
+            to unblock this task for packets that don’t need processing. */
             if( eConsiderFrameForProcessing( pxBufferDescriptor->pucEthernetBuffer ) == eProcessBuffer )
             {
                 BaseType_t xResult;
@@ -671,7 +671,7 @@ BaseType_t xNetworkInterfaceOutput( NetworkBufferDescriptor_t * const pxDescript
 {
     /* Simple network interfaces (as opposed to more efficient zero copy network
     interfaces) just use Ethernet peripheral driver library functions to copy
-    data from the FreeRTOS+TCP buffer into the peripheral driver鈥檚 own buffer.
+    data from the FreeRTOS+TCP buffer into the peripheral driver’s own buffer.
     This example assumes SendData() is a peripheral driver library function that
     takes a pointer to the start of the data to be sent and the length of the
     data to be sent as two separate parameters.  The start of the data is located
@@ -771,5 +771,3 @@ static void CalcTSUIncValue(uint32_t sourceFreq, CEDI_TimerIncrement* incValue)
 
 
 /* [] END OF FILE */
-
-

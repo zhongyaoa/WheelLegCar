@@ -1,35 +1,35 @@
-﻿/*********************************************************************************************************************
-* CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
-* Copyright (c) 2022 SEEKFREE 逐飞科技
+/*********************************************************************************************************************
+* CYT4BB Opensourec Library 鍗筹紙 CYT4BB 寮€婧愬簱锛夋槸涓€涓熀浜庡畼鏂?SDK 鎺ュ彛鐨勭涓夋柟寮€婧愬簱
+* Copyright (c) 2022 SEEKFREE 閫愰绉戞妧
 *
-* 本文件是 CYT4BB 开源库的一部分
+* 鏈枃浠舵槸 CYT4BB 寮€婧愬簱鐨勪竴閮ㄥ垎
 *
-* CYT4BB 开源库 是免费软件
-* 您可以根据自由软件基金会发布的 GPL（GNU General Public License，即 GNU通用公共许可证）的条款
-* 即 GPL 的第3版（即 GPL3.0）或（您选择的）任何后来的版本，重新发布和/或修改它
+* CYT4BB 寮€婧愬簱 鏄厤璐硅蒋浠?
+* 鎮ㄥ彲浠ユ牴鎹嚜鐢辫蒋浠跺熀閲戜細鍙戝竷鐨?GPL锛圙NU General Public License锛屽嵆 GNU閫氱敤鍏叡璁稿彲璇侊級鐨勬潯娆?
+* 鍗?GPL 鐨勭3鐗堬紙鍗?GPL3.0锛夋垨锛堟偍閫夋嫨鐨勶級浠讳綍鍚庢潵鐨勭増鏈紝閲嶆柊鍙戝竷鍜?鎴栦慨鏀瑰畠
 *
-* 本开源库的发布是希望它能发挥作用，但并未对其作任何的保证
-* 甚至没有隐含的适销性或适合特定用途的保证
-* 更多细节请参见 GPL
+* 鏈紑婧愬簱鐨勫彂甯冩槸甯屾湜瀹冭兘鍙戞尌浣滅敤锛屼絾骞舵湭瀵瑰叾浣滀换浣曠殑淇濊瘉
+* 鐢氳嚦娌℃湁闅愬惈鐨勯€傞攢鎬ф垨閫傚悎鐗瑰畾鐢ㄩ€旂殑淇濊瘉
+* 鏇村缁嗚妭璇峰弬瑙?GPL
 *
-* 您应该在收到本开源库的同时收到一份 GPL 的副本
-* 如果没有，请参阅<https://www.gnu.org/licenses/>
+* 鎮ㄥ簲璇ュ湪鏀跺埌鏈紑婧愬簱鐨勫悓鏃舵敹鍒颁竴浠?GPL 鐨勫壇鏈?
+* 濡傛灉娌℃湁锛岃鍙傞槄<https://www.gnu.org/licenses/>
 *
-* 额外注明：
-* 本开源库使用 GPL3.0 开源许可证协议 以上许可申明为译文版本
-* 许可申明英文版在 libraries/doc 文件夹下的 GPL3_permission_statement.txt 文件中
-* 许可证副本在 libraries 文件夹下 即该文件夹下的 LICENSE 文件
-* 欢迎各位使用并传播本程序 但修改内容时必须保留逐飞科技的版权声明（即本声明）
+* 棰濆娉ㄦ槑锛?
+* 鏈紑婧愬簱浣跨敤 GPL3.0 寮€婧愯鍙瘉鍗忚 浠ヤ笂璁稿彲鐢虫槑涓鸿瘧鏂囩増鏈?
+* 璁稿彲鐢虫槑鑻辨枃鐗堝湪 libraries/doc 鏂囦欢澶逛笅鐨?GPL3_permission_statement.txt 鏂囦欢涓?
+* 璁稿彲璇佸壇鏈湪 libraries 鏂囦欢澶逛笅 鍗宠鏂囦欢澶逛笅鐨?LICENSE 鏂囦欢
+* 娆㈣繋鍚勪綅浣跨敤骞朵紶鎾湰绋嬪簭 浣嗕慨鏀瑰唴瀹规椂蹇呴』淇濈暀閫愰绉戞妧鐨勭増鏉冨０鏄庯紙鍗虫湰澹版槑锛?
 *
-* 文件名称          seekfree_assistant_interface
-* 公司名称          成都逐飞科技有限公司
-* 版本信息          查看 libraries/doc 文件夹内 version 文件 版本说明
-* 开发环境          IAR 9.40.1
-* 适用平台          CYT4BB
-* 店铺链接          https://seekfree.taobao.com/
+* 鏂囦欢鍚嶇О          seekfree_assistant_interface
+* 鍏徃鍚嶇О          鎴愰兘閫愰绉戞妧鏈夐檺鍏徃
+* 鐗堟湰淇℃伅          鏌ョ湅 libraries/doc 鏂囦欢澶瑰唴 version 鏂囦欢 鐗堟湰璇存槑
+* 寮€鍙戠幆澧?         IAR 9.40.1
+* 閫傜敤骞冲彴          CYT4BB
+* 搴楅摵閾炬帴          https://seekfree.taobao.com/
 * 
-* 修改记录
-* 日期             作者             备注
+* 淇敼璁板綍
+* 鏃ユ湡             浣滆€?            澶囨敞
 * 2024-1-11        SeekFree         first version
 ********************************************************************************************************************/
 
@@ -42,48 +42,47 @@
 #include "zf_device_wifi_spi.h"
 #include "zf_device_ble6a20.h"
 #include "seekfree_assistant.h"
-#include "controler.h"
 
 #include "seekfree_assistant_interface.h"
 
 
-extern seekfree_assistant_transfer_callback_function   seekfree_assistant_transfer_callback;    // 数据发送函数指针
-extern seekfree_assistant_receive_callback_function    seekfree_assistant_receive_callback;     // 数据接收函数指针
+extern seekfree_assistant_transfer_callback_function   seekfree_assistant_transfer_callback;    // 鏁版嵁鍙戦€佸嚱鏁版寚閽?
+extern seekfree_assistant_receive_callback_function    seekfree_assistant_receive_callback;     // 鏁版嵁鎺ユ敹鍑芥暟鎸囬拡
 
 
 //-------------------------------------------------------------------------------------------------------------------
-// 函数简介     逐飞助手发送函数
-// 参数说明     *buff           需要发送的数据地址
-// 参数说明     length          需要发送的长度
-// 返回参数     uint32          剩余未发送数据长度
-// 使用示例
+// 鍑芥暟绠€浠?    閫愰鍔╂墜鍙戦€佸嚱鏁?
+// 鍙傛暟璇存槑     *buff           闇€瑕佸彂閫佺殑鏁版嵁鍦板潃
+// 鍙傛暟璇存槑     length          闇€瑕佸彂閫佺殑闀垮害
+// 杩斿洖鍙傛暟     uint32          鍓╀綑鏈彂閫佹暟鎹暱搴?
+// 浣跨敤绀轰緥
 //-------------------------------------------------------------------------------------------------------------------
 ZF_WEAK uint32 seekfree_assistant_transfer (const uint8 *buff, uint32 length)
 {
     
-    // 当选择自定义通讯方式时 需要自行完成数据发送功能
+    // 褰撻€夋嫨鑷畾涔夐€氳鏂瑰紡鏃?闇€瑕佽嚜琛屽畬鎴愭暟鎹彂閫佸姛鑳?
     return length;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// 函数简介     逐飞助手接收数据函数
-// 参数说明     *buff           需要接收的数据地址
-// 参数说明     length          要接收的数据最大长度
-// 返回参数     uint32          接收到的数据长度
-// 使用示例
+// 鍑芥暟绠€浠?    閫愰鍔╂墜鎺ユ敹鏁版嵁鍑芥暟
+// 鍙傛暟璇存槑     *buff           闇€瑕佹帴鏀剁殑鏁版嵁鍦板潃
+// 鍙傛暟璇存槑     length          瑕佹帴鏀剁殑鏁版嵁鏈€澶ч暱搴?
+// 杩斿洖鍙傛暟     uint32          鎺ユ敹鍒扮殑鏁版嵁闀垮害
+// 浣跨敤绀轰緥
 //-------------------------------------------------------------------------------------------------------------------
 ZF_WEAK uint32 seekfree_assistant_receive (uint8 *buff, uint32 length)
 {
-    // 当选择自定义通讯方式时 需要自行完成数据接收功能
+    // 褰撻€夋嫨鑷畾涔夐€氳鏂瑰紡鏃?闇€瑕佽嚜琛屽畬鎴愭暟鎹帴鏀跺姛鑳?
     return 0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// 函数简介     逐飞助手接口 初始化
-// 参数说明
-// 返回参数     void
-// 使用示例     seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_WIFI_SPI); 使用高速WIFI SPI模块进行数据收发
-// 备注         需要自行调用设备的初始化，例如使用无线转串口进行数据的收发，则需要自行调用无线转串口的初始化，然后再调用seekfree_assistant_interface_init完成逐飞助手的接口初始化
+// 鍑芥暟绠€浠?    閫愰鍔╂墜鎺ュ彛 鍒濆鍖?
+// 鍙傛暟璇存槑
+// 杩斿洖鍙傛暟     void
+// 浣跨敤绀轰緥     seekfree_assistant_interface_init(SEEKFREE_ASSISTANT_WIFI_SPI); 浣跨敤楂橀€焀IFI SPI妯″潡杩涜鏁版嵁鏀跺彂
+// 澶囨敞         闇€瑕佽嚜琛岃皟鐢ㄨ澶囩殑鍒濆鍖栵紝渚嬪浣跨敤鏃犵嚎杞覆鍙ｈ繘琛屾暟鎹殑鏀跺彂锛屽垯闇€瑕佽嚜琛岃皟鐢ㄦ棤绾胯浆涓插彛鐨勫垵濮嬪寲锛岀劧鍚庡啀璋冪敤seekfree_assistant_interface_init瀹屾垚閫愰鍔╂墜鐨勬帴鍙ｅ垵濮嬪寲
 //-------------------------------------------------------------------------------------------------------------------
 ZF_WEAK void seekfree_assistant_interface_init (seekfree_assistant_transfer_device_enum transfer_device)
 {
@@ -121,11 +120,10 @@ ZF_WEAK void seekfree_assistant_interface_init (seekfree_assistant_transfer_devi
         
         case SEEKFREE_ASSISTANT_CUSTOM:
         {         
-            // 根据自己的需求 自行实现seekfree_assistant_transfer与seekfree_assistant_receive函数，完成数据的收发
+            // 鏍规嵁鑷繁鐨勯渶姹?鑷瀹炵幇seekfree_assistant_transfer涓巗eekfree_assistant_receive鍑芥暟锛屽畬鎴愭暟鎹殑鏀跺彂
+            
         }break;
     }
 }
-
-
 
 

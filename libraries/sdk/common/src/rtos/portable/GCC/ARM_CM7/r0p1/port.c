@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -773,5 +773,3 @@ static void vPortEnableVFP( void )
     }
 
 #endif /* configASSERT_DEFINED */
-
-

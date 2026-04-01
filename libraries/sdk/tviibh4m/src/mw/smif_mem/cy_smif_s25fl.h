@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_s25fl.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -708,6 +708,4 @@ extern const cy_stc_write_info_t     g_s25flWriteCmdInfo[];
 #endif
 
 #endif /* (CY_SMIF_S25FL_H) */
-
-
 

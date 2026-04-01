@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
  * @file     cachel1_armv7.h
  * @brief    CMSIS Level 1 Cache API for Armv7-M and later
  * @version  V1.0.1
@@ -409,5 +409,3 @@ __STATIC_FORCEINLINE void SCB_CleanInvalidateDCache_by_Addr (volatile void *addr
 /*@} end of CMSIS_Core_CacheFunctions */
 
 #endif /* ARM_CACHEL1_ARMV7_H */
-
-

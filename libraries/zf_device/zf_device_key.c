@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -68,8 +68,8 @@ void key_scanner (void)
     {
         if(KEY_RELEASE_LEVEL != gpio_get_level(key_index[i]))                   // 按键按下
         {
-            key_press_time[i] ++;
-            if(KEY_LONG_PRESS_PERIOD / scanner_period <= key_press_time[i])
+            key_press_time[i] += scanner_period;
+            if(KEY_LONG_PRESS_PERIOD <= key_press_time[i])
             {
                 key_state[i] = KEY_LONG_PRESS;
             }
@@ -146,5 +146,3 @@ void key_init (uint32 period)
     }
     scanner_period = period;
 }
-
-

@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_semihosting.h
 * \version 1.0
 *
@@ -180,7 +180,5 @@ cy_semihosting_en_result_t Cy_Semihosting_InitAll(volatile stc_SCB_t *pScbInstan
 /** \} group_semihosting */
 
 /* [] END OF FILE */
-
-
 
 

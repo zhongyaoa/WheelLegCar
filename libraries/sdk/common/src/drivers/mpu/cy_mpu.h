@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file         cy_mpu.h
 * \version      `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 * \platform     Microcontroller family or derivative or all platforms
@@ -250,5 +250,3 @@ extern void Cy_MPU_SetGlobalControlBits(const cy_stc_mpu_global_ctrl_bits_t * mp
 
 
 /* [] END OF FILE */
-
-

@@ -1,4 +1,4 @@
-﻿ /**********************************************************************
+ /**********************************************************************
  * Copyright (C) 2016 Cadence Design Systems, Inc.- http://www.cadence.com
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -17338,5 +17338,3 @@
 #define INST_ENST_CONTROL__NUM                                                1
 
 #endif /* __REG_EMAC_REGS_MACRO_H__ */
-
-

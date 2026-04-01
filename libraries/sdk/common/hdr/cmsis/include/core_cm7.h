@@ -1,4 +1,4 @@
-﻿/**************************************************************************//**
+/**************************************************************************//**
  * @file     core_cm7.h
  * @brief    CMSIS Cortex-M7 Core Peripheral Access Layer Header File
  * @version  V5.1.6
@@ -2376,5 +2376,3 @@ __STATIC_INLINE int32_t ITM_CheckChar (void)
 #endif /* __CORE_CM7_H_DEPENDANT */
 
 #endif /* __CMSIS_GENERIC */
-
-

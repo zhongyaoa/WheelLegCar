@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -83,6 +83,7 @@
 #include "zf_device_icm20602.h"
 #include "zf_device_imu660ra.h"
 #include "zf_device_imu660rb.h"
+#include "zf_device_imu660rc.h"
 #include "zf_device_imu963ra.h"
 #include "zf_device_ips114.h"
 #include "zf_device_ips200.h"
@@ -90,6 +91,7 @@
 #include "zf_device_key.h"
 #include "zf_device_menc15a.h"
 #include "zf_device_oled.h"
+#include "zf_device_pmw3901.h"
 #include "zf_device_mt9v03x.h"
 #include "zf_device_tft180.h"
 #include "zf_device_tsl1401.h"
@@ -104,11 +106,4 @@
 #include "seekfree_assistant.h"
 #include "seekfree_assistant_interface.h"
 //=====================================================组件应用层=====================================================
-
-//=================================================code里面自己加的===================================================
-#include "small_driver_uart_control.h"
-#include "posture_control.h"
-//=================================================code里面自己加的===================================================
-#include "test_zrun.h"
 #endif
-

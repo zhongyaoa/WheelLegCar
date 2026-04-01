@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_tcpwm_pwm.h
 * \version 1.0
 *
@@ -241,5 +241,3 @@ extern void Cy_Tcpwm_Pwm_LSFRConfig(volatile stc_TCPWM_GRP_CNT_t *ptscTCPWM, uin
 
 
 /* [] END OF FILE */
-
-

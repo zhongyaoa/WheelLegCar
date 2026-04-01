@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.1
  * Copyright (C) 2017 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -295,5 +295,3 @@
 #define portINLINE                               __inline
 
 #endif /* FREERTOS_IP_CONFIG_H */
-
-

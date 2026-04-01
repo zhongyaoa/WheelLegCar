@@ -1,4 +1,4 @@
-﻿/*******************************************************************************
+/*******************************************************************************
 * \file cy_trigmux.h
 * \version 1.0
 *
@@ -187,5 +187,3 @@ cy_en_trigmux_status_t Cy_TrigMux_SwTrigger(uint32_t trigLine, en_trig_type_t tr
 /** \} group_lpcomp */
 
 /* [] END OF FILE */
-
-

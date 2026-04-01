@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -775,5 +775,3 @@ static BaseType_t prvTestWaitCondition( const EventBits_t uxCurrentEventBits,
 
 #endif /* configUSE_TRACE_FACILITY */
 /*-----------------------------------------------------------*/
-
-

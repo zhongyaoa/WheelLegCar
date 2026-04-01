@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_srom.h
 * \version 1.0
 *
@@ -1148,6 +1148,4 @@ extern cy_en_srom_api_status_t Cy_Srom_ConvertRespToStatus(uint32_t resp0);
 extern void Cy_Srom_SetResponseHandler(cy_srom_handler handler, IRQn_Type intIdx);
 
 #endif
-
-
 

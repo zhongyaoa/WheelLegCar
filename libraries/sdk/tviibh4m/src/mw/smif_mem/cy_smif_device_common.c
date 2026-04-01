@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_device_common.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -1634,6 +1634,4 @@ static cy_en_smif_status_t Cy_SMIF_TX_CmdAddrDum(volatile cy_stc_smif_reg_t *bas
 #if defined(__cplusplus)
 }
 #endif
-
-
 

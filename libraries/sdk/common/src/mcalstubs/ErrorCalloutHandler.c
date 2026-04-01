@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file ErrorCalloutHandler.c
 *
 * \brief
@@ -34,7 +34,5 @@ FUNC(void, DET_CODE) ErrorCalloutHandler(
   printf("ErrorCalloutHandler: Module %d, Instance %d, API %d, Error %d\n", ModuleId, InstanceId, ApiId, ErrorId);
   #endif
 }
-
-
 
 

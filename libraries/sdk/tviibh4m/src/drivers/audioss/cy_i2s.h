@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_i2s.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 * 
@@ -1139,5 +1139,3 @@ __STATIC_INLINE void Cy_I2S_ClearRxTriggerInterruptMask(volatile stc_I2S_t * bas
 
 
 /* [] END OF FILE */
-
-

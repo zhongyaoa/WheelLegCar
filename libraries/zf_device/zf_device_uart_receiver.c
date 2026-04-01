@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -86,7 +86,7 @@ static void uart_receiver_analysis (uart_receiver_struct *remote_data,uint8 * bu
     remote_data->channel[num++] = (buffer[5] >> 1 | buffer[6] << 7 ) & 0x07FF;
     remote_data->channel[num++] = (buffer[6] >> 4 | buffer[7] << 4 ) & 0x07FF;
     remote_data->channel[num++] = (buffer[7] >> 7 | buffer[8] << 1 | buffer[9] << 9 ) & 0x07FF;
-    remote_data->state = (SBUS_NORMAL_STATE == buffer[23]) ? 1 : 0;
+    remote_data->state = (SBUS_ABNORMAL_STATE == (buffer[23] & SBUS_ABNORMAL_STATE)) ? 0 : 1;
     uart_receiver.finsh_flag  = 1;
 }
 
@@ -136,5 +136,3 @@ void uart_receiver_init(void)
     
     timer_start(UART_RECEVIER_COUNTER);
 }
-
-

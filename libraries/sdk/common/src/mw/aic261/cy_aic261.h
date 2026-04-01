@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_aic261.h
 * \version 1.0
 *
@@ -264,5 +264,3 @@ extern void Cy_AIC261_WriteCtlReg(cy_en_AIC26_Registers regName, uint16_t data);
 extern uint16_t Cy_AIC261_ReadCtlReg(cy_en_AIC26_Registers regName);
 
 #endif
-
-

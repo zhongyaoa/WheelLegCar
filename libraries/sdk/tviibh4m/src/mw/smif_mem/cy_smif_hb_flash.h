@@ -1,4 +1,4 @@
-﻿/* cy_smif_hb_flash.h - Source Code for Cypress's Low Level Driver */
+/* cy_smif_hb_flash.h - Source Code for Cypress's Low Level Driver */
 
 #ifndef CY_SMIF_HB_FLASH_H
 #define CY_SMIF_HB_FLASH_H
@@ -935,7 +935,5 @@ extern void                 CY_SMIF_HbFlash_EnterSPIModeCmd(volatile CY_SMIF_FLA
 #endif /* __cplusplus */
 
 #endif /* CY_SMIF_HB_FLASH_H  */
-
-
 
 

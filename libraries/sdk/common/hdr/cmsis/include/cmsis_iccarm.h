@@ -1,4 +1,4 @@
-﻿/**************************************************************************//**
+/**************************************************************************//**
  * @file     cmsis_iccarm.h
  * @brief    CMSIS compiler ICCARM (IAR Compiler for Arm) header file
  * @version  V5.3.0
@@ -1000,5 +1000,3 @@ __STATIC_FORCEINLINE void __TZ_set_CONTROL_NS(uint32_t control)
 #define __SXTAB16_RORn(ARG1, ARG2, ARG3) __SXTAB16(ARG1, __ROR(ARG2, ARG3))
 
 #endif /* __CMSIS_ICCARM_H__ */
-
-

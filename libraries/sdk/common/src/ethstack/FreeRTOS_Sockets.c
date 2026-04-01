@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -5138,5 +5138,3 @@ BaseType_t xSocketValid( Socket_t xSocket )
 
     #endif /* ipconfigSUPPORT_SELECT_FUNCTION */
 #endif /* 0 */
-
-

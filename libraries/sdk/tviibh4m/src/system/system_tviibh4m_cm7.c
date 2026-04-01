@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file system_tviibh4m_cm7.c
 * \version 1.0
 *
@@ -104,6 +104,4 @@ void Cy_SystemInitFpuEnable(void)
         Cy_RestoreIRQ(interruptState);
     #endif /* (__FPU_USED) && (__FPU_USED == 1U) */
 }
-
-
 

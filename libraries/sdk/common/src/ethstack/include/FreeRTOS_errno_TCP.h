@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -94,5 +94,3 @@ const char * FreeRTOS_strerror_r( BaseType_t xErrnum,
                                   size_t uxLength );
 
 #endif /* FREERTOS_ERRNO_TCP */
-
-

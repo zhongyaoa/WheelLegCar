@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
  * @file     arm_math.h
  * @brief    Public header file for CMSIS DSP Library
  * @version  V1.7.0
@@ -8968,5 +8968,3 @@ float32_t arm_yule_distance(const uint32_t *pA, const uint32_t *pB, uint32_t num
  *
  * End of file.
  */
-
-

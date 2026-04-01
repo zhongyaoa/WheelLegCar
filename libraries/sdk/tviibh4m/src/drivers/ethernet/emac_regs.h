@@ -1,4 +1,4 @@
-﻿ /**********************************************************************
+ /**********************************************************************
  * Copyright (C) 2016 Cadence Design Systems, Inc.- http://www.cadence.com
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -512,5 +512,3 @@ struct emac_regs {
 #endif /* __REG_EMAC_REGS__ */
 
 #endif /* __REG_EMAC_REGS_H__ */
-
-

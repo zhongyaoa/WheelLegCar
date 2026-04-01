@@ -1,4 +1,4 @@
-﻿/* ----------------------------------------------------------------------
+/* ----------------------------------------------------------------------
  * Project:      CMSIS DSP Library
  * Title:        arm_common_tables.h
  * Description:  Extern declaration for common tables
@@ -514,6 +514,4 @@ extern const unsigned char hwLUT[256];
 #endif /* (defined(ARM_MATH_MVEI) || defined(ARM_MATH_HELIUM)) */
 
 #endif /*  ARM_COMMON_TABLES_H */
-
-
 

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -3110,5 +3110,3 @@ void vTaskInternalSetTimeOutState( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNC
 #endif
 /* *INDENT-ON* */
 #endif /* INC_TASK_H */
-
-

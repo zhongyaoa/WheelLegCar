@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_i2s.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -396,5 +396,3 @@ cy_en_syspm_status_t Cy_I2S_DeepSleepCallback(cy_stc_syspm_callback_params_t * c
 #endif /* CY_IP_MXAUDIOSS */
 
 /* [] END OF FILE */
-
-

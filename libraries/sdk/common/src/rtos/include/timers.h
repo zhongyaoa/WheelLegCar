@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -1353,5 +1353,3 @@ BaseType_t xTimerGenericCommand( TimerHandle_t xTimer,
 #endif
 /* *INDENT-ON* */
 #endif /* TIMERS_H */
-
-

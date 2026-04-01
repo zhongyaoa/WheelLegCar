@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_ver_specific.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -822,5 +822,3 @@ void Cy_SMIF_PushTxFifo(volatile cy_stc_smif_reg_t *baseaddr, cy_stc_smif_contex
 #endif /* CY_IP_MXSMIF */
 
 /* [] END OF FILE */
-
-

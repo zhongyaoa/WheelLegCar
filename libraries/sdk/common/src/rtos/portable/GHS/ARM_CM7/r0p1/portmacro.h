@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.2
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -202,5 +202,3 @@
     #endif
 
 #endif /* PORTMACRO_H */
-
-

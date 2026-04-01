@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -70,7 +70,7 @@
 #include "zf_device_ips200.h"
 
        uint16                   ips200_width_max    = 240;
-       uint16                   ips200_height_max   = 240; //原320 4/1 zrun改
+       uint16                   ips200_height_max   = 320;
 static uint16                   ips200_pencolor     = IPS200_DEFAULT_PENCOLOR;          // 画笔颜色(字体色)
 static uint16                   ips200_bgcolor      = IPS200_DEFAULT_BGCOLOR;           // 背景颜色
 static ips200_type_enum         ips200_display_type     = IPS200_TYPE_SPI;
@@ -1280,6 +1280,4 @@ void ips200_init (ips200_type_enum type_select)
     ips200_clear();                                                             // 初始化为白屏
     ips200_debug_init();
 }
-
-
 

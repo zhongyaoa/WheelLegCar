@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -113,6 +113,4 @@ void interrupt_init (cy_stc_sysint_irq_t *isr_config, cy_systemIntr_Handler user
     NVIC_ClearPendingIRQ(isr_config->intIdx);
     NVIC_EnableIRQ(isr_config->intIdx);
 }
-
-
 

@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_ipc_drv.h
 * \version 1.10
 *
@@ -742,5 +742,3 @@ __STATIC_INLINE  cy_en_ipcdrv_status_t  Cy_IPC_Drv_ReadMsgPtr (volatile stc_IPC_
 #endif /* !defined(CY_IPC_DRV_H) */
 
 /* [] END OF FILE */
-
-

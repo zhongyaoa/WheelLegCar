@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_semp.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -1206,6 +1206,4 @@ extern const cy_stc_write_info_t     g_sempWriteCmdInfo[];
 #endif
 
 #endif /* (CY_SMIF_SEMP_H) */
-
-
 

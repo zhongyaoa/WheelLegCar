@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_crypto.h
 * \version 1.0
 *
@@ -1510,5 +1510,3 @@ cy_en_crypto_status_t Cy_Crypto_Chacha_Run(cy_stc_crypto_context_t *cryptoContex
 /** \} group_crypto */
 
 /* [] END OF FILE */
-
-

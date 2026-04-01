@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -4043,5 +4043,3 @@ uint16_t usChar2u16( const uint8_t * pucPtr )
 #ifdef FREERTOS_TCP_ENABLE_VERIFICATION
     #include "aws_freertos_ip_verification_access_ip_define.h"
 #endif
-
-

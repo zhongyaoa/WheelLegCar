@@ -1,4 +1,4 @@
-﻿/* ----------------------------------------------------------------------
+/* ----------------------------------------------------------------------
  * Project:      CMSIS DSP Library
  * Title:        arm_const_structs.h
  * Description:  Constant structs that are initialized for user convenience.
@@ -74,5 +74,3 @@
    extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len4096;
 
 #endif
-
-

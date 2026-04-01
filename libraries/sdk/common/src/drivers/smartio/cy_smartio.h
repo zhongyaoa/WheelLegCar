@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smartio.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -519,5 +519,3 @@ extern cy_en_smartio_status_t Cy_SmartIO_SetDataReg(volatile stc_SMARTIO_PRT_t* 
 /** \} group_smartio */
 
 /* [] END OF FILE */
-
-

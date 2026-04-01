@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_ver_specific.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -215,5 +215,3 @@ extern void                    Cy_SMIF_PushTxFifo(volatile cy_stc_smif_reg_t *ba
 
 
 /* [] END OF FILE */
-
-

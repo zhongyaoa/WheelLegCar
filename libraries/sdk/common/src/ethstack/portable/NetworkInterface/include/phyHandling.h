@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -154,5 +154,3 @@
     #endif
 
 #endif /* ifndef PHYHANDLING_H */
-
-

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS V202011.00
  * Copyright (C) 2020 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -152,6 +152,4 @@ Example configuration for Traveo II with __NVIC_PRIO_BITS = 3 for CM4/CM7:
 /* A header file that defines trace macro can be included here. */
 
 #endif /* FREERTOS_CONFIG_H */
-
-
 

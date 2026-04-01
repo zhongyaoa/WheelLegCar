@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -3073,5 +3073,3 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
     }
 
 #endif /* configUSE_QUEUE_SETS */
-
-

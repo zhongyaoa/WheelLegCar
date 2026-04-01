@@ -1,4 +1,4 @@
-﻿/**************************************************************************//**
+/**************************************************************************//**
  * @file     cmsis_gcc.h
  * @brief    CMSIS compiler GCC header file
  * @version  V5.4.1
@@ -2209,5 +2209,3 @@ __STATIC_FORCEINLINE int32_t __SMMLA (int32_t op1, int32_t op2, int32_t op3)
 #pragma GCC diagnostic pop
 
 #endif /* __CMSIS_GCC_H */
-
-

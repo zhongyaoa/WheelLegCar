@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_scb_uart.c
 * \version 1.0
 *
@@ -1353,6 +1353,4 @@ static void HandleDataTransmit(volatile stc_SCB_t *base, cy_stc_scb_uart_context
 
 
 /* [] END OF FILE */
-
-
 

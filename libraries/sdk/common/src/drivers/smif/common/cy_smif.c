@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -3179,5 +3179,3 @@ static void Cy_SMIF_PUSH_TX_Command(volatile cy_stc_smif_reg_t *base, cy_un_smif
 #endif /* CY_IP_MXSMIF */
 
 /* [] END OF FILE */
-
-

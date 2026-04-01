@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_sd_host.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -1839,5 +1839,3 @@ __STATIC_INLINE uint32_t Cy_SD_Host_GetErrorInterruptMask(stc_SDHC_t const *base
 
 
 /* [] END OF FILE */
-
-

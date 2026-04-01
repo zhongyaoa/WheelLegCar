@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file 		gpio.h
 * \version 		`$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 * \platform		Microcontroller family or derivative or all platforms
@@ -444,5 +444,3 @@ void Cy_SysTick_DelayInUs(uint32_t us);
 
 
 /* [] END OF FILE */
-
-

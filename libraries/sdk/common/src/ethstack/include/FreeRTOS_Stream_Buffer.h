@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -124,5 +124,3 @@
     #endif
 
 #endif /* !defined( FREERTOS_STREAM_BUFFER_H ) */
-
-

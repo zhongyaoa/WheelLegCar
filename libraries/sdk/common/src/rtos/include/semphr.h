@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -1187,5 +1187,3 @@ typedef QueueHandle_t SemaphoreHandle_t;
 #define uxSemaphoreGetCountFromISR( xSemaphore )         uxQueueMessagesWaitingFromISR( ( QueueHandle_t ) ( xSemaphore ) )
 
 #endif /* SEMAPHORE_H */
-
-

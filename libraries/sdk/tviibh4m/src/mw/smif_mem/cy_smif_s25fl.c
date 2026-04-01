@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_s25fl.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -2554,5 +2554,3 @@ cy_en_smif_status_t Cy_SMIF_S25FL_ProgramOrEraseSuspend(volatile cy_stc_smif_reg
 #if defined(__cplusplus)
 }
 #endif
-
-

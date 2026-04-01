@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_mcwdt.h
 * \version 1.0
 *
@@ -1625,5 +1625,3 @@ __STATIC_INLINE uint32_t Cy_MCWDT_GetInterruptStatusMasked(volatile stc_MCWDT_t 
 /** \} group_mcwdt */
 
 /* [] END OF FILE */
-
-

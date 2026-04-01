@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_s25fs.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -1747,5 +1747,3 @@ cy_en_smif_status_t Cy_SMIF_S25FS_Write_DLP_V_Register(volatile cy_stc_smif_reg_
 #if defined(__cplusplus)
 }
 #endif
-
-

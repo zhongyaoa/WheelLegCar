@@ -1,4 +1,4 @@
-﻿/* ----------------------------------------------------------------------
+/* ----------------------------------------------------------------------
  * Project:      CMSIS DSP Library
  * Title:        arm_mve_tables.h
  * Description:  common tables like fft twiddle factors, Bitreverse, reciprocal etc
@@ -232,6 +232,4 @@ extern q15_t rearranged_twiddle_stride3_4096_q15[2728];
 
 
 #endif /*_ARM_MVE_TABLES_H*/
-
-
 

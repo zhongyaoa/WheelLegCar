@@ -1,4 +1,4 @@
-﻿ /**********************************************************************
+ /**********************************************************************
  * Copyright (C) 2014-2015 Cadence Design Systems, Inc.- http://www.cadence.com
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -215,7 +215,8 @@ typedef struct {
                                     // expected. Set on start auto-negotiation.
 
     CEDI_LpPageRx    lpPageRx;       // reserved for passing page Rx in callback
-    CEDI_NetAnStatus anStatus;       // reserved for a-n status in callback
+    CEDI_NetAnStatus anStatus;       // reserved for a-n status in callback
+
     CEDI_1588TimerVal ptpTime;       // reserved for passing ptp event times
 //    CPS_LockHandle  autoNegLock;    // lock to protect auto-neg flags and next
                                     // page register when isr writes null
@@ -251,7 +252,8 @@ uint32_t emacGetLinkStatus(void *pD, uint8_t *status);
 uint32_t emacSetAnAdvPage(void *pD, CEDI_AnAdvPage *advDat);
 uint32_t emacGetLpAbilityPage(void *pD, CEDI_LpAbilityPage *lpAbl);
 uint32_t emacGetLpNextPage(void *pD, CEDI_LpNextPage *npDat);
-uint32_t emacSetNextPageTx(void *pD, CEDI_AnNextPage *npDat);
+uint32_t emacSetNextPageTx(void *pD, CEDI_AnNextPage *npDat);
+
 
 /****************** API Prototypes for other source modules ******************/
 
@@ -437,5 +439,3 @@ uint32_t emacGetType2CompareReg(void *pD, uint8_t index,
 
 
 #endif /* multiple inclusion protection */
-
-

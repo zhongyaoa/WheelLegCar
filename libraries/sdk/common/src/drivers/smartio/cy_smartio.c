@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smartio.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -1157,5 +1157,3 @@ cy_en_smartio_status_t Cy_SmartIO_SetDataReg(volatile stc_SMARTIO_PRT_t* base, u
 #endif
 
 /* [] END OF FILE */
-
-

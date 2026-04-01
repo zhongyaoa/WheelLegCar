@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_button.h
 * \version 1.0
 *
@@ -178,5 +178,3 @@ cy_button_en_state_t   Cy_Button_GetCurrentButtonState(uint8_t u8ButtonId);
 /** \} group_mw_button */
 
 /* [] END OF FILE */
-
-

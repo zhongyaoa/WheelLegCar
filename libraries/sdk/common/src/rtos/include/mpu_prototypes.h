@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -258,5 +258,3 @@ StreamBufferHandle_t MPU_xStreamBufferGenericCreateStatic( size_t xBufferSizeByt
 
 
 #endif /* MPU_PROTOTYPES_H */
-
-

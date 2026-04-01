@@ -1,4 +1,4 @@
-﻿/*******************************************************************************
+/*******************************************************************************
 * \file cy_sd_host.c
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -4779,5 +4779,3 @@ uint32_t Cy_SD_Host_GetPresentState(stc_SDHC_t const *base)
 #endif /* CY_IP_MXSDHC */
 
 /* [] END OF FILE */
-
-

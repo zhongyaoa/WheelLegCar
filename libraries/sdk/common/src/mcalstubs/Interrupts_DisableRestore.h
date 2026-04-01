@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file Interrupts_DisableRestore.h
 *
 * \brief
@@ -66,5 +66,3 @@ void Cy_SysLib_ExitCriticalSection(TestEnv_IntStatusType IEstatus);
 
 #endif /* INTERRUPTS_DISABLERESTORE_H */
 /*==================[end of file]============================================*/
-
-

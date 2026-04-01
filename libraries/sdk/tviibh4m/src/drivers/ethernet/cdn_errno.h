@@ -1,4 +1,4 @@
-﻿ /**********************************************************************
+ /**********************************************************************
  * Copyright (C) 2014-2015 Cadence Design Systems, Inc.- http://www.cadence.com
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -102,5 +102,3 @@
 #endif //ECANCELED
 
 #endif //__INCLUDE_CDN_ERRNO_H__
-
-

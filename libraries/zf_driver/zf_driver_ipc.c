@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -143,6 +143,4 @@ void ipc_communicate_init(ipc_port_enum ipc_port, ipc_callback_function ipc_call
     user_callback = ipc_callback;
     ipc_port_save = (uint8)ipc_port;
 }
-
-
 

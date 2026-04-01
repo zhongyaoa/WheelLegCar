@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -153,5 +153,3 @@ void exti_init (gpio_pin_enum exti_pin, exti_trigger_enum trigger)
     exti_irq_cfg.isEnabled  = true;
     interrupt_init(&exti_irq_cfg, exti_isr_func[exti_pin / 8], 3)                ;
 }
-
-

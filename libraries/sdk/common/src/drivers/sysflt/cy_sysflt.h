@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_sysflt.h
 * \version 1.0
 *
@@ -382,5 +382,3 @@ uint32_t Cy_SysFlt_GetInterruptStatusMasked(volatile stc_FAULT_STRUCT_t *ptscSYS
 /** \} group_sysflt */
 
 /* [] END OF FILE */
-
-

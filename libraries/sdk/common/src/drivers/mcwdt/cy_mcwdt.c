@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_mcwdt.c
 * \version 1.0
 *
@@ -161,5 +161,3 @@ void Cy_MCWDT_ClearWatchdog(volatile stc_MCWDT_t *base, cy_en_mcwdtctr_t counter
 #endif
 
 /* [] END OF FILE */
-
-

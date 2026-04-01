@@ -1,4 +1,4 @@
-﻿#include "cy_srom.h"
+#include "cy_srom.h"
 
 static un_srom_api_scrach_sram_t g_scratch __ALIGNED(32); // This must locate on SRAM and align with cache line size (in case device has cache)
 static un_srom_api_args_2_t      g_scratch2 __ALIGNED(32); // This must locate on SRAM and align with cache line size (in case device has cache)
@@ -489,6 +489,4 @@ static void Cy_Srom_ISR_ResponseIPC(void)
                                 (masked & 0xFFFF0000ul) >> 16ul
                               );
 }
-
-
 

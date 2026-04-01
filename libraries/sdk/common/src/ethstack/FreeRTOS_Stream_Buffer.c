@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS+TCP V2.4.0
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -426,5 +426,3 @@ size_t uxStreamBufferGet( StreamBuffer_t * pxBuffer,
 
     return uxCount;
 }
-
-

@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_mw_flash.h
 * \version 1.0
 *
@@ -61,5 +61,3 @@ void Cy_FlashWriteCode1(uint32_t writeAddr, const uint32_t* data, cy_en_flash_pr
 #endif /* CY_MW_FLASH_H */
 
 /* [] END OF FILE */
-
-

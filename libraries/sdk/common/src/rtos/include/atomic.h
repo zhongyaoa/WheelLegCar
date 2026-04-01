@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -417,5 +417,3 @@ static portFORCE_INLINE uint32_t Atomic_XOR_u32( uint32_t volatile * pulDestinat
 /* *INDENT-ON* */
 
 #endif /* ATOMIC_H */
-
-

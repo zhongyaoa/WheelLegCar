@@ -1,35 +1,35 @@
-﻿/*********************************************************************************************************************
-* CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
-* Copyright (c) 2022 SEEKFREE 逐飞科技
+/*********************************************************************************************************************
+* CYT4BB Opensourec Library 鍗筹紙 CYT4BB 寮€婧愬簱锛夋槸涓€涓熀浜庡畼鏂?SDK 鎺ュ彛鐨勭涓夋柟寮€婧愬簱
+* Copyright (c) 2022 SEEKFREE 閫愰绉戞妧
 *
-* 本文件是 CYT4BB 开源库的一部分
+* 鏈枃浠舵槸 CYT4BB 寮€婧愬簱鐨勪竴閮ㄥ垎
 *
-* CYT4BB 开源库 是免费软件
-* 您可以根据自由软件基金会发布的 GPL（GNU General Public License，即 GNU通用公共许可证）的条款
-* 即 GPL 的第3版（即 GPL3.0）或（您选择的）任何后来的版本，重新发布和/或修改它
+* CYT4BB 寮€婧愬簱 鏄厤璐硅蒋浠?
+* 鎮ㄥ彲浠ユ牴鎹嚜鐢辫蒋浠跺熀閲戜細鍙戝竷鐨?GPL锛圙NU General Public License锛屽嵆 GNU閫氱敤鍏叡璁稿彲璇侊級鐨勬潯娆?
+* 鍗?GPL 鐨勭3鐗堬紙鍗?GPL3.0锛夋垨锛堟偍閫夋嫨鐨勶級浠讳綍鍚庢潵鐨勭増鏈紝閲嶆柊鍙戝竷鍜?鎴栦慨鏀瑰畠
 *
-* 本开源库的发布是希望它能发挥作用，但并未对其作任何的保证
-* 甚至没有隐含的适销性或适合特定用途的保证
-* 更多细节请参见 GPL
+* 鏈紑婧愬簱鐨勫彂甯冩槸甯屾湜瀹冭兘鍙戞尌浣滅敤锛屼絾骞舵湭瀵瑰叾浣滀换浣曠殑淇濊瘉
+* 鐢氳嚦娌℃湁闅愬惈鐨勯€傞攢鎬ф垨閫傚悎鐗瑰畾鐢ㄩ€旂殑淇濊瘉
+* 鏇村缁嗚妭璇峰弬瑙?GPL
 *
-* 您应该在收到本开源库的同时收到一份 GPL 的副本
-* 如果没有，请参阅<https://www.gnu.org/licenses/>
+* 鎮ㄥ簲璇ュ湪鏀跺埌鏈紑婧愬簱鐨勫悓鏃舵敹鍒颁竴浠?GPL 鐨勫壇鏈?
+* 濡傛灉娌℃湁锛岃鍙傞槄<https://www.gnu.org/licenses/>
 *
-* 额外注明：
-* 本开源库使用 GPL3.0 开源许可证协议 以上许可申明为译文版本
-* 许可申明英文版在 libraries/doc 文件夹下的 GPL3_permission_statement.txt 文件中
-* 许可证副本在 libraries 文件夹下 即该文件夹下的 LICENSE 文件
-* 欢迎各位使用并传播本程序 但修改内容时必须保留逐飞科技的版权声明（即本声明）
+* 棰濆娉ㄦ槑锛?
+* 鏈紑婧愬簱浣跨敤 GPL3.0 寮€婧愯鍙瘉鍗忚 浠ヤ笂璁稿彲鐢虫槑涓鸿瘧鏂囩増鏈?
+* 璁稿彲鐢虫槑鑻辨枃鐗堝湪 libraries/doc 鏂囦欢澶逛笅鐨?GPL3_permission_statement.txt 鏂囦欢涓?
+* 璁稿彲璇佸壇鏈湪 libraries 鏂囦欢澶逛笅 鍗宠鏂囦欢澶逛笅鐨?LICENSE 鏂囦欢
+* 娆㈣繋鍚勪綅浣跨敤骞朵紶鎾湰绋嬪簭 浣嗕慨鏀瑰唴瀹规椂蹇呴』淇濈暀閫愰绉戞妧鐨勭増鏉冨０鏄庯紙鍗虫湰澹版槑锛?
 *
-* 文件名称          seekfree_assistant
-* 公司名称          成都逐飞科技有限公司
-* 版本信息          查看 libraries/doc 文件夹内 version 文件 版本说明
-* 开发环境          IAR 9.40.1
-* 适用平台          CYT4BB
-* 店铺链接          https://seekfree.taobao.com/
+* 鏂囦欢鍚嶇О          seekfree_assistant
+* 鍏徃鍚嶇О          鎴愰兘閫愰绉戞妧鏈夐檺鍏徃
+* 鐗堟湰淇℃伅          鏌ョ湅 libraries/doc 鏂囦欢澶瑰唴 version 鏂囦欢 鐗堟湰璇存槑
+* 寮€鍙戠幆澧?         IAR 9.40.1
+* 閫傜敤骞冲彴          CYT4BB
+* 搴楅摵閾炬帴          https://seekfree.taobao.com/
 * 
-* 修改记录
-* 日期             作者             备注
+* 淇敼璁板綍
+* 鏃ユ湡             浣滆€?            澶囨敞
 * 2024-1-11        SeekFree         first version
 ********************************************************************************************************************/
 #ifndef _seekfree_assistant_h_
@@ -39,119 +39,119 @@
 #include "zf_common_typedef.h"
 
 
-// 1：使能参数调节的功能  0：关闭参数调节的功能
+// 1锛氫娇鑳藉弬鏁拌皟鑺傜殑鍔熻兘  0锛氬叧闂弬鏁拌皟鑺傜殑鍔熻兘
 #define SEEKFREE_ASSISTANT_SET_PARAMETR_ENABLE      ( 1 )
 
 
 
-// 定义接收FIFO大小
+// 瀹氫箟鎺ユ敹FIFO澶у皬
 #define SEEKFREE_ASSISTANT_BUFFER_SIZE              ( 0x80 )
     
-// 定义示波器的最大通道数量 
+// 瀹氫箟绀烘尝鍣ㄧ殑鏈€澶ч€氶亾鏁伴噺 
 #define SEEKFREE_ASSISTANT_SET_OSCILLOSCOPE_COUNT   ( 0x08 )
     
-// 定义参数调试的最大通道数量    
+// 瀹氫箟鍙傛暟璋冭瘯鐨勬渶澶ч€氶亾鏁伴噺    
 #define SEEKFREE_ASSISTANT_SET_PARAMETR_COUNT       ( 0x08 )
     
-// 定义图像边线最大数量   
+// 瀹氫箟鍥惧儚杈圭嚎鏈€澶ф暟閲?  
 #define SEEKFREE_ASSISTANT_CAMERA_MAX_BOUNDARY      ( 0x08 )
     
-// 单片机往上位机发送的帧头 
+// 鍗曠墖鏈哄線涓婁綅鏈哄彂閫佺殑甯уご 
 #define SEEKFREE_ASSISTANT_SEND_HEAD                ( 0xAA )
     
-// 摄像头类 
+// 鎽勫儚澶寸被 
 #define SEEKFREE_ASSISTANT_CAMERA_FUNCTION          ( 0x02 )
 #define SEEKFREE_ASSISTANT_CAMERA_DOT_FUNCTION      ( 0x03 )
 #define SEEKFREE_ASSISTANT_CAMERA_OSCILLOSCOPE      ( 0x10 )
     
-// 上位机往单片机发送的帧头 
+// 涓婁綅鏈哄線鍗曠墖鏈哄彂閫佺殑甯уご 
 #define SEEKFREE_ASSISTANT_RECEIVE_HEAD             ( 0x55 )
     
-// 参数设置类    
+// 鍙傛暟璁剧疆绫?   
 #define SEEKFREE_ASSISTANT_RECEIVE_SET_PARAMETER    ( 0x20 )
 
 
-// 摄像头类型枚举
+// 鎽勫儚澶寸被鍨嬫灇涓?
 typedef enum
 {
-    // 按照摄像头型号定义
+    // 鎸夌収鎽勫儚澶村瀷鍙峰畾涔?
     SEEKFREE_ASSISTANT_OV7725_BIN = 1,
     SEEKFREE_ASSISTANT_MT9V03X,
     SEEKFREE_ASSISTANT_SCC8660,
 
-    // 按照图像类型定义
+    // 鎸夌収鍥惧儚绫诲瀷瀹氫箟
     SEEKFREE_ASSISTANT_BINARY = 1,
     SEEKFREE_ASSISTANT_GRAY,
     SEEKFREE_ASSISTANT_RGB565,
 }seekfree_assistant_image_type_enum;
 
-// 摄像头类型枚举
+// 鎽勫儚澶寸被鍨嬫灇涓?
 typedef enum
 {
-    // 按照摄像头型号定义
-    X_BOUNDARY,     // 发送的图像中边界信息只包含X，也就是只有横坐标信息，纵坐标根据图像高度得到
-    Y_BOUNDARY,     // 发送的图像中边界信息只包含Y，也就是只有纵坐标信息，横坐标根据图像宽度得到，通常很少有这样的需求
-    XY_BOUNDARY,    // 发送的图像中边界信息包含X与Y，这样可以指定点在任意位置，就可以方便显示出回弯的效果
-    NO_BOUNDARY,    // 发送的图像中没有边线信息
+    // 鎸夌収鎽勫儚澶村瀷鍙峰畾涔?
+    X_BOUNDARY,     // 鍙戦€佺殑鍥惧儚涓竟鐣屼俊鎭彧鍖呭惈X锛屼篃灏辨槸鍙湁妯潗鏍囦俊鎭紝绾靛潗鏍囨牴鎹浘鍍忛珮搴﹀緱鍒?
+    Y_BOUNDARY,     // 鍙戦€佺殑鍥惧儚涓竟鐣屼俊鎭彧鍖呭惈Y锛屼篃灏辨槸鍙湁绾靛潗鏍囦俊鎭紝妯潗鏍囨牴鎹浘鍍忓搴﹀緱鍒帮紝閫氬父寰堝皯鏈夎繖鏍风殑闇€姹?
+    XY_BOUNDARY,    // 鍙戦€佺殑鍥惧儚涓竟鐣屼俊鎭寘鍚玐涓嶻锛岃繖鏍峰彲浠ユ寚瀹氱偣鍦ㄤ换鎰忎綅缃紝灏卞彲浠ユ柟渚挎樉绀哄嚭鍥炲集鐨勬晥鏋?
+    NO_BOUNDARY,    // 鍙戦€佺殑鍥惧儚涓病鏈夎竟绾夸俊鎭?
 }seekfree_assistant_boundary_type_enum;
 
 typedef struct
 {
-    uint8 head;                                                 // 帧头
-    uint8 channel_num;                                          // 高四位为功能字  低四位为通道数量
-    uint8 check_sum;                                            // 和校验
-    uint8 length;                                               // 包长度
-    float data[SEEKFREE_ASSISTANT_SET_OSCILLOSCOPE_COUNT];      // 通道数据
+    uint8 head;                                                 // 甯уご
+    uint8 channel_num;                                          // 楂樺洓浣嶄负鍔熻兘瀛? 浣庡洓浣嶄负閫氶亾鏁伴噺
+    uint8 check_sum;                                            // 鍜屾牎楠?
+    uint8 length;                                               // 鍖呴暱搴?
+    float data[SEEKFREE_ASSISTANT_SET_OSCILLOSCOPE_COUNT];      // 閫氶亾鏁版嵁
 }seekfree_assistant_oscilloscope_struct;
 
 
 typedef struct
 {
-    uint8 head;                                                 // 帧头
-    uint8 function;                                             // 功能字
-    uint8 camera_type;                                          // 低四位表示边界数量 第四位表示是否有图像数据  例如0x13：其中3表示一副图像有三条边界（通常是左边界、中线、右边界）、1表示没有图像数据
-    uint8 length;                                               // 包长度（仅包含协议部分）
-    uint16 image_width;                                         // 图像宽度
-    uint16 image_height;                                        // 图像高度
+    uint8 head;                                                 // 甯уご
+    uint8 function;                                             // 鍔熻兘瀛?
+    uint8 camera_type;                                          // 浣庡洓浣嶈〃绀鸿竟鐣屾暟閲?绗洓浣嶈〃绀烘槸鍚︽湁鍥惧儚鏁版嵁  渚嬪0x13锛氬叾涓?琛ㄧず涓€鍓浘鍍忔湁涓夋潯杈圭晫锛堥€氬父鏄乏杈圭晫銆佷腑绾裤€佸彸杈圭晫锛夈€?琛ㄧず娌℃湁鍥惧儚鏁版嵁
+    uint8 length;                                               // 鍖呴暱搴︼紙浠呭寘鍚崗璁儴鍒嗭級
+    uint16 image_width;                                         // 鍥惧儚瀹藉害
+    uint16 image_height;                                        // 鍥惧儚楂樺害
 }seekfree_assistant_camera_struct;          
             
             
 typedef struct          
 {           
-    uint8 head;                                                 // 帧头
-    uint8 function;                                             // 功能字
-    uint8 dot_type;                                             // 点类型  BIT5：1：坐标是16位的 0：坐标是8位的    BIT7-BIT6：0：只有X坐标 1：只有Y坐标 2：X和Y坐标都有    BIT3-BIT0：边界数量
-    uint8 length;                                               // 包长度（仅包含协议部分）
-    uint16 dot_num;                                             // 画点数量
-    uint8  valid_flag;                                          // 通道标识
-    uint8  reserve;                                             // 保留
+    uint8 head;                                                 // 甯уご
+    uint8 function;                                             // 鍔熻兘瀛?
+    uint8 dot_type;                                             // 鐐圭被鍨? BIT5锛?锛氬潗鏍囨槸16浣嶇殑 0锛氬潗鏍囨槸8浣嶇殑    BIT7-BIT6锛?锛氬彧鏈塜鍧愭爣 1锛氬彧鏈塝鍧愭爣 2锛歑鍜孻鍧愭爣閮芥湁    BIT3-BIT0锛氳竟鐣屾暟閲?
+    uint8 length;                                               // 鍖呴暱搴︼紙浠呭寘鍚崗璁儴鍒嗭級
+    uint16 dot_num;                                             // 鐢荤偣鏁伴噺
+    uint8  valid_flag;                                          // 閫氶亾鏍囪瘑
+    uint8  reserve;                                             // 淇濈暀
 }seekfree_assistant_camera_dot_struct;          
             
 typedef struct          
 {           
-    void *image_addr;                                           // 摄像头地址
-    uint16 width;                                               // 图像宽度
-    uint16 height;                                              // 图像高度
-    seekfree_assistant_image_type_enum camera_type;             // 摄像头类型
-    void *boundary_x[SEEKFREE_ASSISTANT_CAMERA_MAX_BOUNDARY];   // 边界横坐标数组地址
-    void *boundary_y[SEEKFREE_ASSISTANT_CAMERA_MAX_BOUNDARY];   // 边界纵坐标数组地址
+    void *image_addr;                                           // 鎽勫儚澶村湴鍧€
+    uint16 width;                                               // 鍥惧儚瀹藉害
+    uint16 height;                                              // 鍥惧儚楂樺害
+    seekfree_assistant_image_type_enum camera_type;             // 鎽勫儚澶寸被鍨?
+    void *boundary_x[SEEKFREE_ASSISTANT_CAMERA_MAX_BOUNDARY];   // 杈圭晫妯潗鏍囨暟缁勫湴鍧€
+    void *boundary_y[SEEKFREE_ASSISTANT_CAMERA_MAX_BOUNDARY];   // 杈圭晫绾靛潗鏍囨暟缁勫湴鍧€
 }seekfree_assistant_camera_buffer_struct;
 
 typedef struct
 {
-    uint8 head;                                                 // 帧头
-    uint8 function;                                             // 功能字
-    uint8 channel;                                              // 通道
-    uint8 check_sum;                                            // 和校验
-    float data;                                                 // 数据
+    uint8 head;                                                 // 甯уご
+    uint8 function;                                             // 鍔熻兘瀛?
+    uint8 channel;                                              // 閫氶亾
+    uint8 check_sum;                                            // 鍜屾牎楠?
+    float data;                                                 // 鏁版嵁
 }seekfree_assistant_parameter_struct;
 
 typedef uint32 (*seekfree_assistant_transfer_callback_function) (const uint8 *buff, uint32 length);
 typedef uint32 (*seekfree_assistant_receive_callback_function)  (uint8 *buff, uint32 length);
 
-extern seekfree_assistant_oscilloscope_struct                   seekfree_assistant_oscilloscope_data;                                               // 虚拟示波器数据
-extern float                                                    seekfree_assistant_parameter[SEEKFREE_ASSISTANT_SET_PARAMETR_COUNT];                // 保存接收到的参数
-extern vuint8                                                   seekfree_assistant_parameter_update_flag[SEEKFREE_ASSISTANT_SET_PARAMETR_COUNT];    // 参数更新标志位
+extern seekfree_assistant_oscilloscope_struct                   seekfree_assistant_oscilloscope_data;                                               // 铏氭嫙绀烘尝鍣ㄦ暟鎹?
+extern float                                                    seekfree_assistant_parameter[SEEKFREE_ASSISTANT_SET_PARAMETR_COUNT];                // 淇濆瓨鎺ユ敹鍒扮殑鍙傛暟
+extern vuint8                                                   seekfree_assistant_parameter_update_flag[SEEKFREE_ASSISTANT_SET_PARAMETR_COUNT];    // 鍙傛暟鏇存柊鏍囧織浣?
     
     
 void    seekfree_assistant_oscilloscope_send                    (seekfree_assistant_oscilloscope_struct *seekfree_assistant_oscilloscope);
@@ -163,5 +163,3 @@ void    seekfree_assistant_data_analysis                        (void);
 
 
 #endif
-
-

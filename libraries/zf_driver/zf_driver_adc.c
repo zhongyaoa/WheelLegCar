@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -221,6 +221,4 @@ void adc_init (adc_channel_enum adc_chn, adc_resolution_enum resolution)
     Cy_Adc_Channel_Enable(&sar_adc[adc_chn / 32]->CH[adc_chn % 32]);
     Cy_Adc_Channel_SoftwareTrigger(&sar_adc[adc_chn / 32]->CH[adc_chn % 32]);
 }
-
-
 

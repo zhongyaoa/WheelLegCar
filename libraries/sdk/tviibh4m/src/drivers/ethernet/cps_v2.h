@@ -1,4 +1,4 @@
-﻿ /**********************************************************************
+ /**********************************************************************
  * Copyright (C) 2011-2015 Cadence Design Systems, Inc.- http://www.cadence.com
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -141,5 +141,3 @@ extern void CPS_WritePhysAddress32(volatile uint32_t* location, uint32_t addrVal
 extern void CPS_BufferCopy(volatile uint8_t *dst, volatile uint8_t *src, uint32_t size);
 
 #endif /* multiple inclusion protection */
-
-

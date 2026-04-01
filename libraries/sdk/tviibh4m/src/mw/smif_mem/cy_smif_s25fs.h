@@ -1,4 +1,4 @@
-﻿/***************************************************************************//**
+/***************************************************************************//**
 * \file cy_smif_s25fs.h
 * \version `$CY_MAJOR_VERSION`.`$CY_MINOR_VERSION`
 *
@@ -745,6 +745,4 @@ extern const cy_stc_write_info_t     g_s25fsWriteCmdInfo[];
 #endif
 
 #endif /* (CY_SMIF_S25FS_H) */
-
-
 

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * FreeRTOS Kernel V10.4.6
  * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
  *
@@ -751,5 +751,3 @@ BaseType_t xCoRoutineRemoveFromEventList( const List_t * pxEventList );
 /* *INDENT-ON* */
 
 #endif /* CO_ROUTINE_H */
-
-
