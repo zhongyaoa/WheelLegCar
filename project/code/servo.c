@@ -9,10 +9,6 @@ void servo_init(void)
     pwm_init(L2, SERVO_MOTOR_FREQ, 300);
     pwm_init(R1, SERVO_MOTOR_FREQ, 300);
     pwm_init(R2, SERVO_MOTOR_FREQ, 300);
-    servo_set_angle(L1, 0);
-    servo_set_angle(L2, 0);
-    servo_set_angle(R1, 0);
-    servo_set_angle(R2, 0);
 }
 
 void servo_set_angle(pwm_channel_enum channel, float angle)

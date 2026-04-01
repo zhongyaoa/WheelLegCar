@@ -75,7 +75,7 @@ void dynamic_motor_control(void)
         }
         left_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
         right_motor_duty = func_limit_ab(cascade_value.angular_speed_cycle.out, -10000, 10000);
-        small_driver_set_duty(-left_motor_duty,right_motor_duty); //4/010修改：电机反转
+        small_driver_set_duty(-left_motor_duty,right_motor_duty); //4/010修改：新的无刷双驱板没有区分左右电机，输入正值都为顺时针转动，左右电机对称安装，所以左电机输入取反
     }
     else{
         small_driver_set_duty(0,0);
@@ -93,7 +93,7 @@ void pit_isr_callback(void)
         small_driver_get_speed();
         car_speed = (motor_value.receive_left_speed_data + motor_value.receive_right_speed_data)/2;
         //pid_control_pd(&cascade_value.speed_cycle,0.0f,car_speed);
-        pid_control_pd(&cascade_value.speed_cycle,target_speed,car_speed);
+        pid_control_pd(&cascade_value.speed_cycle,0,car_speed);
     }
 
 
