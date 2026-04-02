@@ -107,7 +107,7 @@
 #include "seekfree_assistant_interface.h"
 //=====================================================组件应用层=====================================================
 #include "balance_control.h"
-#include "small_driver_uart_control.h"
 #include "posture_control.h"
+#include "small_driver_uart_control.h"
 #include "steer_control.h"
 #endif

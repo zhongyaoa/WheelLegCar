@@ -1,4 +1,4 @@
-/*********************************************************************************************************************
+﻿/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -51,8 +51,8 @@ int main(void)
     debug_init();                       // 调试串口信息初始化
     // 此处编写用户代码 例如外设初始化代码等
     imu660ra_init();                    // IMU660RA 初始化
-    balance_cascade_init();              // 串级平衡控制初始化
-    small_driver_uart_init();            // 小车控制串口初始化
+    //balance_cascade_init();              // 串级平衡控制初始化
+    //small_driver_uart_init();            // 小车控制串口初始化
 
     pit_ms_init(PIT_CH0,1);
     
@@ -63,7 +63,8 @@ int main(void)
     while(true)
     {
         // 此处编写需要循环执行的代码
-        printf("%f,%f, %f\n", roll_balance_cascade.posture_value.yaw, roll_balance_cascade.posture_value.rol, roll_balance_cascade.posture_value.pit);
+        //printf("%f,%f, %f\n", roll_balance_cascade.posture_value.yaw, roll_balance_cascade.posture_value.rol, roll_balance_cascade.posture_value.pit);
+        printf("%f,%f,%f\n",imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z);
         system_delay_ms(10); // 延时 10ms
       
       
@@ -76,10 +77,10 @@ void pit_ch0_isr(void)
     pit_isr_flag_clear(PIT_CH0); // 清除中断标志位
     imu660ra_get_acc();
     imu660ra_get_gyro();
-    quaternion_module_calculate(&roll_balance_cascade);
+    //quaternion_module_calculate(&roll_balance_cascade);
 
-    pid_control (&roll_balance_cascade.angular_speed_cycle,0,imu660ra_gyro_x); // imu660ra_gyro_? imu固定在车模上之后再决定
-    small_driver_set_duty(-(int16)roll_balance_cascade.angular_speed_cycle.out, (int16)roll_balance_cascade.angular_speed_cycle.out);
+    //pid_control (&roll_balance_cascade.angular_speed_cycle,0,imu660ra_gyro_x); // imu660ra_gyro_? imu固定在车模上之后再决定
+    //small_driver_set_duty(-(int16)roll_balance_cascade.angular_speed_cycle.out, (int16)roll_balance_cascade.angular_speed_cycle.out);
 }
 
 // **************************** 代码区域 ****************************

@@ -1,5 +1,21 @@
 #include "posture_control.h"
 
+uint32 sys_times = 0;
+uint8 system_time_state[20] = {0};
+
+uint8 run_state = 0;
+uint8 jump_flag = 0;
+uint32 jump_time = 0;
+
+int16 car_speed = 0;
+float target_speed = 0.0f;
+float car_distance = 0.0f;
+
+int16 left_motor_duty = 0;
+int16 right_motor_duty = 0;
+int16 balance_duty_max = 10000;
+int16 turn_duty_max = 3000;
+
 //=============================================================================
 // 函数简介     计算并更新车辆状态标志
 // 返回参数     void

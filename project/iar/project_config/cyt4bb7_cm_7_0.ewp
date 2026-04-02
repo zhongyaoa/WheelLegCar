@@ -1116,6 +1116,36 @@
     <group>
         <name>code</name>
         <file>
+            <name>$PROJ_DIR$\..\..\code\balance_control.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\balance_control.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\controler.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\controler.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\posture_control.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\posture_control.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\small_driver_uart_control.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\small_driver_uart_control.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\steer_control.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\steer_control.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
         </file>
     </group>

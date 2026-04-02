@@ -87,22 +87,22 @@ void serial_optimizer_callback(cascade_value_struct* cascade_value_ptr){ //接�
                 switch(channel)
                 {
                     case 0x01: // 通道1：机械偏置
-                        cascade_value_ptr->cascade_common_value.mechanical_offset = (int16)f;
+                        cascade_value_ptr->posture_value.mechanical_zero = f;
                         break;
                     case 0x02: // 通道2：角速度闭环 kp
-                        cascade_value_ptr->angular_speed_cycle.kp = f;
+                        cascade_value_ptr->angular_speed_cycle.p = f;
                         break;
                     case 0x03: // 通道3：角速度闭环 kd
-                        cascade_value_ptr->angular_speed_cycle.kd = f;
+                        cascade_value_ptr->angular_speed_cycle.d = f;
                         break;
                     case 0x04: // 通道4：角度闭环 kp
-                        cascade_value_ptr->angle_cycle.kp = f;
+                        cascade_value_ptr->angle_cycle.p = f;
                         break;
                     case 0x05: // 通道5：角度闭环 kd
-                        cascade_value_ptr->angle_cycle.kd = f;
+                        cascade_value_ptr->angle_cycle.d = f;
                         break;
                     case 0x06: // 通道6：速度闭环 kp
-                        cascade_value_ptr->speed_cycle.kp = f;
+                        cascade_value_ptr->speed_cycle.p = f;
                         break;
                     default:
                         // 其他通道暂不处理
@@ -150,19 +150,19 @@ void my_wireless_optimizer(uint8 data)
         }
         else if('a' == data)
         {
-            run_flag = true; // 启动控制
+            run_state = true; // 启动控制
         }
         else if('d' == data)
         {
-            run_flag = false; // 停止控制
+            run_state = false; // 停止控制
         }
         else if('j' == data)
         {
-            cascade_value.cascade_common_value.mechanical_offset += 1; // 增加机械偏置
+            roll_balance_cascade.posture_value.mechanical_zero += 1; // 增加机械偏置
         }
         else if('k' == data)
         {
-            cascade_value.cascade_common_value.mechanical_offset -= 1; // 减小机械偏置
+            roll_balance_cascade.posture_value.mechanical_zero -= 1; // 减小机械偏置
         }
         else if('!' == data)
         {
