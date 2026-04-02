@@ -6,70 +6,65 @@ uint8 motor_init_ok = 0;
 
 //-------------------------------------------------------------------------------------------------------------------
 // 函数简介     无刷驱动 串口接收回调函数
-// 参数说明     void
+// 参数说明     receive_data    单字节接收数据
 // 返回参数     void
 // 使用示例     uart_control_callback(1000, -1000);
 // 备注信息     用于解析接收到的速度数据  该函数需要在对应的串口接收中断中调用
 //-------------------------------------------------------------------------------------------------------------------
 void uart_control_callback(uint8 receive_data)
 {
-    //uint8 receive_data;                                                                     // 定义临时变量
+    if(receive_data == 0xA5 && motor_value.receive_data_buffer[0] != 0xA5)              // 判断是否收到帧头 并且 当前接收内容中是否正确包含帧头
+    {
+        motor_value.receive_data_count = 0;                                             // 未收到帧头或者未正确包含帧头则重新接收
+    }
 
-    //if(uart_query_byte(SMALL_DRIVER_UART, &receive_data))                                   // 接收串口数据
-    //{
-        if(receive_data == 0xA5 && motor_value.receive_data_buffer[0] != 0xA5)              // 判断是否收到帧头 并且 当前接收内容中是否正确包含帧头
+    motor_value.receive_data_buffer[motor_value.receive_data_count ++] = receive_data;  // 保存串口数据
+
+    if(motor_value.receive_data_count >= 7)                                             // 判断是否接收到指定数量的数据
+    {
+        if(motor_value.receive_data_buffer[0] == 0xA5)                                  // 判断帧头是否正确
         {
-            motor_value.receive_data_count = 0;                                             // 未收到帧头或者未正确包含帧头则重新接收
-        }
 
-        motor_value.receive_data_buffer[motor_value.receive_data_count ++] = receive_data;  // 保存串口数据
+            motor_value.sum_check_data = 0;                                             // 清除校验位数据
 
-        if(motor_value.receive_data_count >= 7)                                             // 判断是否接收到指定数量的数据
-        {
-            if(motor_value.receive_data_buffer[0] == 0xA5)                                  // 判断帧头是否正确
+            for(int i = 0; i < 6; i ++)
+            {
+                motor_value.sum_check_data += motor_value.receive_data_buffer[i];       // 重新计算校验位
+            }
+
+            if(motor_value.sum_check_data == motor_value.receive_data_buffer[6])        // 校验数据准确性
             {
 
-                motor_value.sum_check_data = 0;                                             // 清除校验位数据
-
-                for(int i = 0; i < 6; i ++)
+                if(motor_value.receive_data_buffer[1] == 0x02)                          // 判断是否正确接收到 速度输出 功能字
                 {
-                    motor_value.sum_check_data += motor_value.receive_data_buffer[i];       // 重新计算校验位
-                }
-
-                if(motor_value.sum_check_data == motor_value.receive_data_buffer[6])        // 校验数据准确性
-                {
-
-                    if(motor_value.receive_data_buffer[1] == 0x02)                          // 判断是否正确接收到 速度输出 功能字
-                    {
-                        if(motor_init_ok == 0){
-                            motor_init_ok = 1;
-                            printf("motor_init_ok\n");
-                        }
-
-                        motor_value.receive_left_speed_data  = (((int)motor_value.receive_data_buffer[2] << 8) | (int)motor_value.receive_data_buffer[3]);  // 拟合左侧电机转速数据
-
-                        motor_value.receive_right_speed_data = (((int)motor_value.receive_data_buffer[4] << 8) | (int)motor_value.receive_data_buffer[5]);  // 拟合右侧电机转速数据
+                    if(motor_init_ok == 0){
+                        motor_init_ok = 1;
+                        printf("motor_init_ok\n");
                     }
 
-                    motor_value.receive_data_count = 0;                                     // 清除缓冲区计数值
+                    motor_value.receive_left_speed_data  = (((int)motor_value.receive_data_buffer[2] << 8) | (int)motor_value.receive_data_buffer[3]);  // 拟合左侧电机转速数据
 
-                    memset(motor_value.receive_data_buffer, 0, 7);                          // 清除缓冲区数据
+                    motor_value.receive_right_speed_data = (((int)motor_value.receive_data_buffer[4] << 8) | (int)motor_value.receive_data_buffer[5]);  // 拟合右侧电机转速数据
                 }
-                else
-                {
-                    motor_value.receive_data_count = 0;                                     // 清除缓冲区计数值
 
-                    memset(motor_value.receive_data_buffer, 0, 7);                          // 清除缓冲区数据
-                }
+                motor_value.receive_data_count = 0;                                     // 清除缓冲区计数值
+
+                memset(motor_value.receive_data_buffer, 0, 7);                          // 清除缓冲区数据
             }
             else
             {
-                motor_value.receive_data_count = 0;                                         // 清除缓冲区计数值
+                motor_value.receive_data_count = 0;                                     // 清除缓冲区计数值
 
-                memset(motor_value.receive_data_buffer, 0, 7);                              // 清除缓冲区数据
+                memset(motor_value.receive_data_buffer, 0, 7);                          // 清除缓冲区数据
             }
         }
-    //}
+        else
+        {
+            motor_value.receive_data_count = 0;                                         // 清除缓冲区计数值
+
+            memset(motor_value.receive_data_buffer, 0, 7);                              // 清除缓冲区数据
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------

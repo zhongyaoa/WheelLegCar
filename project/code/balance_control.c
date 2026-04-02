@@ -328,7 +328,7 @@ void balance_cascade_init (void)
 {
     // 初始化俯仰平衡控制的姿态参数
     roll_balance_cascade.posture_value.call_cycle      = 0.001;     // 调用周期 0.001s (1ms)
-    roll_balance_cascade.posture_value.mechanical_zero = -7.0f;     // 机械零点初始化为 0 (此处代码赋值为-4.0f)
+    roll_balance_cascade.posture_value.mechanical_zero = -8.5f;     // 机械零点初始化为 0 (此处代码赋值为-4.0f)
     roll_balance_cascade.posture_value.correct_kp      = 0.4f;      // 姿态校准比例系数 0.4
     roll_balance_cascade.posture_value.correct_ki      = 0.015f;    // 姿态校准积分系数 0.015
 
@@ -355,7 +355,8 @@ void balance_cascade_init (void)
     roll_balance_cascade.angle_cycle.p                   = 700.0f;  // 角度环 P
     roll_balance_cascade.angle_cycle.i                   = 1.0f;    // 角度环 I
     roll_balance_cascade.angle_cycle.d                  = 50.0f;    // 角度环 D
-    roll_balance_cascade.speed_cycle.p                  = 5.0f;     // 速度环 P
+
+    roll_balance_cascade.speed_cycle.p                  = 1.0f;     // 速度环 P
     roll_balance_cascade.speed_cycle.i                  = 0.0f;     // 速度环 I
     roll_balance_cascade.speed_cycle.d                  = 0.0f;     // 速度环 D
 

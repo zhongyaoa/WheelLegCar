@@ -8,8 +8,10 @@
 #ifndef CONTROLER_H_
 #define CONTROLER_H_
 
+#include <stdbool.h>
 #include "zf_common_headfile.h"
-#include "posture_control.h"
+#include "zf_common_typedef.h"
+#include "balance_control.h"
 
 #define OPTIMIZER_UART                       (UART_1)
 #define OPTIMIZER_BAUDRATE                   (115200)        //蓝牙-串口模块波特率为115200

@@ -40,7 +40,8 @@ extern uint8 motor_init_ok;
 
 
 
-void uart_control_callback(uint8 receive_data);                                   // 无刷驱动 串口接收回调函数
+
+void uart_control_callback(uint8 receive_data);                     // 无刷驱动 串口接收回调函数
 
 void small_driver_set_duty(int16 left_duty, int16 right_duty);      // 无刷驱动 设置电机占空比
 
