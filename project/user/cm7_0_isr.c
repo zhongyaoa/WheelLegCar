@@ -43,10 +43,10 @@
 void pit0_ch0_isr()                     // 定时器通道 0 周期中断服务函数      
 {
     pit_isr_flag_clear(PIT_CH0);
-    //pit_call_back();                     // 定时器回调函数 例如平衡控制的周期回调等
-  
-    
-    
+    pit_call_back();
+    //imu660ra_get_acc();                                // 获取 IMU660RA 加速度计数据
+    //imu660ra_get_gyro();                               // 获取 IMU660RA 陀螺仪数据
+    //quaternion_module_calculate(&roll_balance_cascade); // 计算四元数，更新姿态数据
 }
 
 void pit0_ch1_isr()                     // 定时器通道 1 周期中断服务函数      

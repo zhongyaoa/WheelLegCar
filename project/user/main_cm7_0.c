@@ -50,10 +50,20 @@ int main(void)
     clock_init(SYSTEM_CLOCK_250M); 	// 时钟配置及系统初始化<务必保留>
     debug_init();                       // 调试串口信息初始化
     // 此处编写用户代码 例如外设初始化代码等
-    imu660ra_init();                    // IMU660RA 初始化
-    //balance_cascade_init();              // 串级平衡控制初始化
-    //small_driver_uart_init();            // 小车控制串口初始化
-
+    balance_cascade_init();              // 串级平衡控制初始化
+    small_driver_uart_init();            // 小车控制串口初始化
+    while(1)
+    {
+        if(imu660ra_init())
+        {
+           printf("\r\n imu660ra init error.");        // imu660ra 初始化失败
+        }
+        else
+        {
+           break;
+        }
+    }
+    steer_control_init();              // 舵机控制初始化
     pit_ms_init(PIT_CH0,1);
     
 
@@ -63,24 +73,24 @@ int main(void)
     while(true)
     {
         // 此处编写需要循环执行的代码
-        //printf("%f,%f, %f\n", roll_balance_cascade.posture_value.yaw, roll_balance_cascade.posture_value.rol, roll_balance_cascade.posture_value.pit);
-        printf("%f,%f,%f\n",imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z);
-        system_delay_ms(10); // 延时 10ms
-      
-      
+        if(system_time_state[9])   // 例如每 1ms 执行一次的代码
+        {
+            system_time_state[9] = 0;
+            //printf("\r\n roll: %f, pit: %f, yaw: %f", roll_balance_cascade.posture_value.rol, roll_balance_cascade.posture_value.pit, roll_balance_cascade.posture_value.yaw);
+            printf("%d,%d,%d\n",imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z);
+             // 此处编写需要每 1ms 执行一次的代码
+            // 此处编写需要每 1ms 执行一次的代码
+        }
+        //printf("%d,%d,%d,%d,%d,%d\n",imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z,imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z);
+         // 此处编写需要每 1ms 执行一次的代码
         // 此处编写需要循环执行的代码
     }
 }
 
-void pit_ch0_isr(void)
-{
-    pit_isr_flag_clear(PIT_CH0); // 清除中断标志位
-    imu660ra_get_acc();
-    imu660ra_get_gyro();
-    //quaternion_module_calculate(&roll_balance_cascade);
-
-    //pid_control (&roll_balance_cascade.angular_speed_cycle,0,imu660ra_gyro_x); // imu660ra_gyro_? imu固定在车模上之后再决定
-    //small_driver_set_duty(-(int16)roll_balance_cascade.angular_speed_cycle.out, (int16)roll_balance_cascade.angular_speed_cycle.out);
-}
-
+//void pit0_ch0_isr()                     // 定时器通道 0 周期中断服务函数      
+//{
+    //pit_isr_flag_clear(PIT_CH0);
+    //imu660ra_get_acc();
+    //imu660ra_get_gyro();
+//}
 // **************************** 代码区域 ****************************

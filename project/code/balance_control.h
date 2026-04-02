@@ -10,8 +10,8 @@
 #define GYRO_TRANSITION_FACTOR    (16.384f)               // 陀螺仪数据转换系数 (LSB/(°/s))
 
 // 加速度计数据转换
-#define ACC_DATA_X                ( imu660ra_acc_x)       // 加速度计 X 轴原始数据
-#define ACC_DATA_Y                (-imu660ra_acc_y)       // 加速度计 Y 轴原始数据（带方向转换）
+#define ACC_DATA_X                (-imu660ra_acc_x)       // 加速度计 X 轴原始数据
+#define ACC_DATA_Y                ( imu660ra_acc_y)       // 加速度计 Y 轴原始数据（带方向转换）
 #define ACC_DATA_Z                (-imu660ra_acc_z)       // 加速度计 Z 轴原始数据（带方向转换）
 #define ACC_TRANSITION_FACTOR     (4096.0f)               // 加速度计数据转换系数 (LSB/g)
 
