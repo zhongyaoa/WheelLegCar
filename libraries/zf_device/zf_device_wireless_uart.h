@@ -88,6 +88,7 @@ typedef enum
 uint32      wireless_uart_send_byte         (const uint8 data);
 uint32      wireless_uart_send_buffer      (const uint8 *buff, uint32 len);
 uint32      wireless_uart_send_string       (const char *str);
+void        wireless_printf                 (const char *fmt, ...);
 
 uint32      wireless_uart_read_buffer       (uint8 *buff, uint32 len);
 

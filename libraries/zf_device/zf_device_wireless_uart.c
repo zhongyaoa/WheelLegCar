@@ -52,6 +52,8 @@
 #include "zf_driver_uart.h"
 #include "zf_device_type.h"
 #include "zf_device_wireless_uart.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 static  fifo_struct                                     wireless_uart_fifo;
 static  uint8                                           wireless_uart_buffer[WIRELESS_UART_BUFFER_SIZE];
@@ -167,6 +169,35 @@ uint32 wireless_uart_send_string (const char *str)
         }
     }
     return len;
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+// 函数简介     无线转串口模块 格式化打印
+// 参数说明     *fmt            格式化字符串
+// 返回参数     void
+// 使用示例     wireless_printf("val=%d\r\n", value);
+// 备注信息     格式化后通过无线串口发送
+//-------------------------------------------------------------------------------------------------------------------
+void wireless_printf (const char *fmt, ...)
+{
+    zf_assert(NULL != fmt);
+
+    static uint8 wireless_printf_buffer[256] = {0};
+    int32 str_length = 0;
+    va_list arg;
+
+    va_start(arg, fmt);
+    str_length = vsnprintf((char *)wireless_printf_buffer, sizeof(wireless_printf_buffer) - 1, fmt, arg);
+    va_end(arg);
+
+    if(str_length > 0)
+    {
+        if((uint32)str_length > sizeof(wireless_printf_buffer) - 1)
+        {
+            str_length = sizeof(wireless_printf_buffer) - 1;
+        }
+        wireless_uart_send_buffer(wireless_printf_buffer, (uint32)str_length);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------------------------

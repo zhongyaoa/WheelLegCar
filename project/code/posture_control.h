@@ -33,14 +33,13 @@ extern int16 right_motor_duty;
 extern int16 balance_duty_max;
 extern int16 turn_duty_max;
 
-// 偏航状态（供外部模块只读）
-extern float yaw_angle;
-extern float yaw_target;
-extern uint8 yaw_locked;
-
-// 设置偏航目标（相对于启动时的锁定角，单位：度）
-// 外部循迹模块通过此接口修改偏航目标
-void yaw_set_target(float target_deg);
+// 外部差速注入（循迹模块写入，正值左转，负值右转，单位与 duty 相同）
+extern int16 turn_diff_ext;
+// 兼容保留：偏航角（°），当前同步为四元数偏航角
+extern float imu_yaw_deg;
+// 四元数解算偏航角（°）及其差分角速度（°/s），供循迹模块使用
+extern float quat_yaw_deg;
+extern float quat_yaw_rate_dps;
 
 // 车辆控制主流程
 void car_state_calculate(void);

@@ -12,14 +12,29 @@ float target_speed = 0.0f;
 float car_distance = 0.0f;
 
 // 偏航锁定控制变量
-float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
-float yaw_target    = 0.0f;  // 偏航目标角 (°)
-uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
+static float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
+static float yaw_target    = 0.0f;  // 偏航目标角 (°)
+static uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
+
+// 外部差速注入（循迹模块写入，正值左转，负值右转）
+int16 turn_diff_ext = 0;
+// 兼容保留：偏航角（°），当前同步为四元数偏航角
+float imu_yaw_deg   = 0.0f;
+// 供外部只读的四元数偏航角（°）与差分角速度（°/s）
+float quat_yaw_deg = 0.0f;
+float quat_yaw_rate_dps = 0.0f;
 
 int16 left_motor_duty = 0;
 int16 right_motor_duty = 0;
 int16 balance_duty_max = 10000;
 int16 turn_duty_max = 300;
+
+static float normalize_angle(float a)
+{
+    while(a > 180.0f) a -= 360.0f;
+    while(a < -180.0f) a += 360.0f;
+    return a;
+}
 
 //=============================================================================
 // 函数简介     计算并更新车辆状态标志
@@ -183,6 +198,9 @@ void car_steer_control(void)
 
 void pit_call_back(void)
 {
+    static uint8 yaw_init = 0;
+    static float last_quat_yaw_deg = 0.0f;
+
     sys_times ++;                                      // 系统计时自增
 
     for(int i = 0; i < 20; i ++)
@@ -193,6 +211,20 @@ void pit_call_back(void)
     imu660ra_get_gyro();                               // 获取 IMU660RA 陀螺仪数据
     imu660ra_get_acc();                                // 获取 IMU660RA 加速度计数据
     quaternion_module_calculate(&roll_balance_cascade); // 计算四元数，更新姿态数据
+
+    quat_yaw_deg = roll_balance_cascade.posture_value.yaw;
+    if(!yaw_init)
+    {
+        yaw_init = 1;
+        quat_yaw_rate_dps = 0.0f;
+    }
+    else
+    {
+        float yaw_delta = normalize_angle(quat_yaw_deg - last_quat_yaw_deg);
+        quat_yaw_rate_dps = yaw_delta / 0.001f;
+    }
+    last_quat_yaw_deg = quat_yaw_deg;
+    imu_yaw_deg = quat_yaw_deg;
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
     {
@@ -233,26 +265,10 @@ void car_motor_control(void)
         left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 左电机占空比: 取角速度环输出，限幅
         right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 右电机占空比: 取角速度环输出，限幅
 
-        // 偏航锁定：积分 gyro_z 得到相对偏航角，做 PD 闭环
-        // gyro_z 量程约 ±4000 LSB，转换系数 16.384 LSB/(°/s)，调用周期 0.001s
-        float gyro_z_dps = (float)imu660ra_gyro_z / 16.384f;   // 转换为 °/s
-        yaw_angle += gyro_z_dps * 0.001f;                       // 积分得到偏航角 (°)
-
-        if(!yaw_locked && run_state)
-        {
-            yaw_target = yaw_angle;                             // 启动时锁定当前偏航角为目标
-            yaw_locked = 1;
-        }
-
-        float yaw_error = yaw_target - yaw_angle;               // 偏航角误差 (°)
-        // P 项：角度误差纠偏；D 项：角速度阻尼（gyro_z_dps 已是微分）
-        float yaw_kp = 8.0f;                                    // 可调：偏航角度增益
-        float yaw_kd = 0.5f;                                    // 可调：偏航角速度阻尼
-        int16 turn_diff = (int16)(yaw_kp * yaw_error - yaw_kd * gyro_z_dps);
-        turn_diff = func_limit_ab(turn_diff, -turn_duty_max, turn_duty_max);
-
-        left_motor_duty  = func_limit_ab(left_motor_duty  + turn_diff, -balance_duty_max, balance_duty_max);
-        right_motor_duty = func_limit_ab(right_motor_duty - turn_diff, -balance_duty_max, balance_duty_max);
+        // 叠加外部差速（循迹转向注入）
+        int16 td = func_limit_ab(turn_diff_ext, -turn_duty_max, turn_duty_max);
+        left_motor_duty  = func_limit_ab(left_motor_duty  + td, -balance_duty_max, balance_duty_max);
+        right_motor_duty = func_limit_ab(right_motor_duty - td, -balance_duty_max, balance_duty_max);
     }
     else                                               // 当运行状态为 0 时，电机关闭
     {
@@ -261,15 +277,4 @@ void car_motor_control(void)
     }
 
     small_driver_set_duty(-left_motor_duty, right_motor_duty);  // 设置驱动的电机占空比（左电机取反:小车往前走时,左电机占空比为负,右电机为正）
-}
-
-//=============================================================================
-// 函数简介     设置偏航目标角（外部循迹接口）
-// 参数         target_deg：目标偏航角（相对IMU积分的绝对角度，单位：度）
-// 使用示例     yaw_set_target(yaw_angle + 30.0f);
-// 备注信息     yaw_locked 必须已初始化，此函数直接覆写 yaw_target
-//=============================================================================
-void yaw_set_target(float target_deg)
-{
-    yaw_target = target_deg;
 }

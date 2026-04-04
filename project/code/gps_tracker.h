@@ -12,7 +12,7 @@
 
 #define GPS_TRACKER_MAX_POINTS      10      // 最多记录点位数
 #define GPS_TRACKER_ARRIVE_DIST     1.5     // 到达判定距离 (m)
-#define GPS_TRACKER_CRUISE_SPEED    (-60.0f)// 循迹前进速度（负值=前进，与 target_speed 约定一致）
+#define GPS_TRACKER_CRUISE_SPEED    (-120.0f)// 循迹前进速度（负值=前进，与 target_speed 约定一致）
 #define GPS_TRACKER_YAW_KP          6.0f    // 偏航纠偏 P 增益（度→duty映射，实际由posture yaw PD执行）
 
 typedef enum

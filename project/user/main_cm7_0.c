@@ -46,24 +46,23 @@ int main(void)
 {
     clock_init(SYSTEM_CLOCK_250M);      // 时钟配置及系统初始化<务必保留>
     debug_init();                       // 调试串口信息初始化
+    wireless_uart_init();
+    
 
     balance_cascade_init();             // 串级平衡控制初始化
-    printf("\r\n balance_cascade_init ok.");
     small_driver_uart_init();           // 小车控制串口初始化
-    printf("\r\n small_driver_uart_init ok.");
     imu660ra_init();
     steer_control_init();               // 舵机控制初始化
-    printf("\r\n steer_control_init ok.");
 
     gnss_init(TAU1201);                 // GPS 初始化（UART2，P10_0/P10_1）
-    printf("\r\n gnss_init ok.");
 
     button_init();                      // 按键初始化
     led_init();                         // LED 初始化
     led(off);
     gps_tracker_init();                 // GPS 循迹模块初始化
-    printf("\r\n gps_tracker_init ok.");
-    printf("\r\n [UP]=记录点位  [LEFT]=开始循迹\r\n");
+    wireless_uart_send_string("\r\n gps_tracker_init ok.");
+    wireless_printf("\r\n gps_tracker_init ok.");
+    wireless_printf("\r\n [UP]=记录点位  [LEFT]=开始循迹\r\n");
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
 
