@@ -1,4 +1,4 @@
-﻿/*********************************************************************************************************************
+/*********************************************************************************************************************
 * CYT4BB Opensourec Library 即（ CYT4BB 开源库）是一个基于官方 SDK 接口的第三方开源库
 * Copyright (c) 2022 SEEKFREE 逐飞科技
 *
@@ -34,58 +34,61 @@
 ********************************************************************************************************************/
 
 #include "zf_common_headfile.h"
+#include "controler.h"
+#include "gps_tracker.h"
 // 打开新的工程或者工程移动了位置务必执行以下操作
 // 第一步 关闭上面所有打开的文件
 // 第二步 project->clean  等待下方进度条走完
 
-// 本例程是开源库空工程 可用作移植或者测试各类内外设
-// 本例程是开源库空工程 可用作移植或者测试各类内外设
-// 本例程是开源库空工程 可用作移植或者测试各类内外设
-
 // **************************** 代码区域 ****************************
-
 
 int main(void)
 {
-    clock_init(SYSTEM_CLOCK_250M); 	// 时钟配置及系统初始化<务必保留>
+    clock_init(SYSTEM_CLOCK_250M);      // 时钟配置及系统初始化<务必保留>
     debug_init();                       // 调试串口信息初始化
-    // 此处编写用户代码 例如外设初始化代码等
-    balance_cascade_init();              // 串级平衡控制初始化
+
+    balance_cascade_init();             // 串级平衡控制初始化
     printf("\r\n balance_cascade_init ok.");
-    small_driver_uart_init();            // 小车控制串口初始化
+    small_driver_uart_init();           // 小车控制串口初始化
     printf("\r\n small_driver_uart_init ok.");
     imu660ra_init();
-    steer_control_init();              // 舵机控制初始化
+    steer_control_init();               // 舵机控制初始化
     printf("\r\n steer_control_init ok.");
-    pit_ms_init(PIT_CH0,1);
-    
-    
-    // 此处编写用户代码 例如外设初始化代码等
+
+    gnss_init(TAU1201);                 // GPS 初始化（UART2，P10_0/P10_1）
+    printf("\r\n gnss_init ok.");
+
+    button_init();                      // 按键初始化
+    led_init();                         // LED 初始化
+    led(off);
+    gps_tracker_init();                 // GPS 循迹模块初始化
+    printf("\r\n gps_tracker_init ok.");
+    printf("\r\n [UP]=记录点位  [LEFT]=开始循迹\r\n");
+
+    pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
+
+    uint32 btn_poll_tick = 0;
+
     while(true)
     {
-        // 此处编写需要循环执行的代码
-        //if(system_time_state[9])   // 例如每 1ms 执行一次的代码
-        //{
-            //system_time_state[9] = 0;
-            ////printf("\r\n roll: %f, pit: %f, yaw: %f", roll_balance_cascade.posture_value.rol, roll_balance_cascade.posture_value.pit, roll_balance_cascade.posture_value.yaw);
-            //printf("%d,%d,%d\n",imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z);
-             //// 此处编写需要每 1ms 执行一次的代码
-            //// 此处编写需要每 1ms 执行一次的代码
-        //}
-        printf("%d,%d,%d,%d,%d,%d\r\n",imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z,imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z);
-        //printf("%f,%d,%d,%d,%d,%d\n",roll_balance_cascade.angular_speed_cycle.p,(int16)roll_balance_cascade.angular_speed_cycle.out,imu660ra_gyro_x,motor_value.receive_left_speed_data,motor_value.receive_right_speed_data);
-        //printf("%d,%d,%d\n",motor_value.receive_left_speed_data,motor_value.receive_right_speed_data,car_speed);
-        //small_driver_set_duty(250, 250);
+        // 每 50ms 轮询一次按键（10ms * 5）
+        btn_poll_tick++;
+        if(btn_poll_tick >= 5)
+        {
+            btn_poll_tick = 0;
+            gps_tracker_button_poll();
+        }
+
+        // GPS 串口中断已将数据写入缓冲并置 gnss_flag
+        if(gnss_flag)
+        {
+            gnss_flag = 0;
+            gnss_data_parse();          // 解析 NMEA 数据
+            gps_tracker_update();       // 循迹逻辑更新（约 1Hz）
+        }
+
         system_delay_ms(10);
-         // 此处编写需要每 1ms 执行一次的代码
-        // 此处编写需要循环执行的代码
     }
 }
 
-//void pit0_ch0_isr()                     // 定时器通道 0 周期中断服务函数      
-//{
-    //pit_isr_flag_clear(PIT_CH0);
-    //imu660ra_get_acc();
-    //imu660ra_get_gyro();
-//}
 // **************************** 代码区域 ****************************

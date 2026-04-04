@@ -33,6 +33,15 @@ extern int16 right_motor_duty;
 extern int16 balance_duty_max;
 extern int16 turn_duty_max;
 
+// 偏航状态（供外部模块只读）
+extern float yaw_angle;
+extern float yaw_target;
+extern uint8 yaw_locked;
+
+// 设置偏航目标（相对于启动时的锁定角，单位：度）
+// 外部循迹模块通过此接口修改偏航目标
+void yaw_set_target(float target_deg);
+
 // 车辆控制主流程
 void car_state_calculate(void);
 void car_steer_control(void);

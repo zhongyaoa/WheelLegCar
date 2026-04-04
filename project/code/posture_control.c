@@ -12,9 +12,9 @@ float target_speed = 0.0f;
 float car_distance = 0.0f;
 
 // 偏航锁定控制变量
-static float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
-static float yaw_target    = 0.0f;  // 偏航目标角 (°)
-static uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
+float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
+float yaw_target    = 0.0f;  // 偏航目标角 (°)
+uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
 
 int16 left_motor_duty = 0;
 int16 right_motor_duty = 0;
@@ -261,4 +261,15 @@ void car_motor_control(void)
     }
 
     small_driver_set_duty(-left_motor_duty, right_motor_duty);  // 设置驱动的电机占空比（左电机取反:小车往前走时,左电机占空比为负,右电机为正）
+}
+
+//=============================================================================
+// 函数简介     设置偏航目标角（外部循迹接口）
+// 参数         target_deg：目标偏航角（相对IMU积分的绝对角度，单位：度）
+// 使用示例     yaw_set_target(yaw_angle + 30.0f);
+// 备注信息     yaw_locked 必须已初始化，此函数直接覆写 yaw_target
+//=============================================================================
+void yaw_set_target(float target_deg)
+{
+    yaw_target = target_deg;
 }
