@@ -72,7 +72,7 @@ int main(void)
              //// 此处编写需要每 1ms 执行一次的代码
             //// 此处编写需要每 1ms 执行一次的代码
         //}
-        printf("%d,%d,%d,%d,%d,%d\n",imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z,imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z);
+        printf("%d,%d,%d,%d,%d,%d\r\n",imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z,imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z);
         //printf("%f,%d,%d,%d,%d,%d\n",roll_balance_cascade.angular_speed_cycle.p,(int16)roll_balance_cascade.angular_speed_cycle.out,imu660ra_gyro_x,motor_value.receive_left_speed_data,motor_value.receive_right_speed_data);
         //printf("%d,%d,%d\n",motor_value.receive_left_speed_data,motor_value.receive_right_speed_data,car_speed);
         //small_driver_set_duty(250, 250);

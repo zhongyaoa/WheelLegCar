@@ -196,7 +196,7 @@ void pit_call_back(void)
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
     {
-        car_speed = (motor_value.receive_right_speed_data - motor_value.receive_left_speed_data) / 2;  //向前走时left_motor_duty为负, right_motor_duty为正, 计算车辆速度：左右电机速度差的一半
+        car_speed = (motor_value.receive_left_speed_data - motor_value.receive_right_speed_data) / 2;  //向前走时left_motor_duty为负, right_motor_duty为正, 计算车辆速度：左右电机速度差的一半
         //car_speed = (motor_value.receive_right_speed_data - motor_value.receive_left_speed_data) / 2;  // 计算车辆速度：左右电机速度差的一半
         pid_control(&roll_balance_cascade.speed_cycle, target_speed, (float)car_speed);  // 速度环 PID 控制，目标值为 0.0 f
     }
