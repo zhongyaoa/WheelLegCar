@@ -1,24 +1,24 @@
 #include "gps_tracker.h"
 #include "posture_control.h"
 #include "controler.h"
+#include "math.h"
 
 // ===== 状态 =====
 tracker_state_enum tracker_state       = TRACKER_STATE_IDLE;
 uint8              tracker_point_count = 0;
 
-// ===== 内部存储 =====
-static double recorded_lat[GPS_TRACKER_MAX_POINTS];
-static double recorded_lon[GPS_TRACKER_MAX_POINTS];
+// ===== 内部存储：各点位在 inav 坐标系中的 (x, y)（单位：m）=====
+static float recorded_x[INAV_TRACKER_MAX_POINTS];
+static float recorded_y[INAV_TRACKER_MAX_POINTS];
+
+// 记录第一个点时锁定的初始航向角（°），后续回到此航向=0误差
+static float initial_heading_deg = 0.0f;
 
 static uint8 current_target_idx = 1;
 
 // 按键消抖计数
 static uint32 btn_up_hold   = 0;
 static uint32 btn_left_hold = 0;
-
-// 标定时记录的四元数 yaw（°）和对应真北方位角（°）
-// heading_north_offset = 真北方位 - quat_yaw_deg（启动时标定，之后为常数）
-static float heading_north_offset = 0.0f;
 
 // 循迹 yaw PD 参数
 #define TRACKER_YAW_KP   8.0f   // 偏航角度增益 (duty/°)
@@ -35,6 +35,31 @@ static float normalize_angle(float a)
 }
 
 //=============================================================================
+// 两点间平面距离 (m)
+//=============================================================================
+static float point_distance(float x0, float y0, float x1, float y1)
+{
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+    return sqrtf(dx * dx + dy * dy);
+}
+
+//=============================================================================
+// 从 (x0,y0) 到 (x1,y1) 的方位角（°），以初始航向为 0°，顺时针为正
+// 坐标系：X 轴正方向 = initial_heading_deg 方向
+//=============================================================================
+static float point_bearing(float x0, float y0, float x1, float y1)
+{
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+    // atan2f 返回弧度：dy/dx，其中 y 轴正方向对应 inav 坐标系的前方（初始航向）
+    // 转换为角度，X 轴为前方时用 atan2(dx, dy)
+    float bearing_rad = atan2f(dx, dy);
+    float bearing_deg = bearing_rad * (180.0f / 3.14159265f);
+    return bearing_deg;
+}
+
+//=============================================================================
 // 初始化
 //=============================================================================
 void gps_tracker_init(void)
@@ -44,7 +69,10 @@ void gps_tracker_init(void)
     current_target_idx    = 1;
     btn_up_hold           = 0;
     btn_left_hold         = 0;
-    heading_north_offset  = 0.0f;
+    initial_heading_deg   = 0.0f;
+    inav_active           = 0;
+    inav_x                = 0.0f;
+    inav_y                = 0.0f;
     turn_diff_ext         = 0;
 }
 
@@ -60,23 +88,40 @@ void gps_tracker_button_poll(void)
         if(btn_up_hold == 1)  // 上升沿，只触发一次
         {
             if(tracker_state == TRACKER_STATE_IDLE
-               && gnss.state
-               && tracker_point_count < GPS_TRACKER_MAX_POINTS)
+               && tracker_point_count < INAV_TRACKER_MAX_POINTS)
             {
-                recorded_lat[tracker_point_count] = gnss.latitude;
-                recorded_lon[tracker_point_count] = gnss.longitude;
-                tracker_point_count++;
-                led(toggle);
-                wireless_printf("[TRACKER] Point %d recorded: lat=%.7f lon=%.7f\r\n",
-                       tracker_point_count, gnss.latitude, gnss.longitude);
+                if(tracker_point_count == 0)
+                {
+                    // 第一个点：锁定初始航向，坐标系清零
+                    initial_heading_deg    = quat_yaw_deg;
+                    inav_heading_ref       = initial_heading_deg;
+                    inav_x                 = 0.0f;
+                    inav_y                 = 0.0f;
+                    inav_active            = 1;  // 开始惯性导航积分
+
+                    recorded_x[0]          = 0.0f;
+                    recorded_y[0]          = 0.0f;
+                    tracker_point_count    = 1;
+                    led(toggle);
+                    wireless_printf("[INAV] Point 0 (origin) locked. heading_ref=%.1f deg\r\n",
+                                    initial_heading_deg);
+                }
+                else
+                {
+                    // 后续点：记录当前推算坐标
+                    recorded_x[tracker_point_count] = inav_x;
+                    recorded_y[tracker_point_count] = inav_y;
+                    tracker_point_count++;
+                    led(toggle);
+                    wireless_printf("[INAV] Point %d recorded: x=%.2f y=%.2f\r\n",
+                                    tracker_point_count - 1,
+                                    recorded_x[tracker_point_count - 1],
+                                    recorded_y[tracker_point_count - 1]);
+                }
             }
-            else if(!gnss.state)
+            else if(tracker_point_count >= INAV_TRACKER_MAX_POINTS)
             {
-                wireless_printf("[TRACKER] GPS not fixed.\r\n");
-            }
-            else if(tracker_point_count >= GPS_TRACKER_MAX_POINTS)
-            {
-                wireless_printf("[TRACKER] Max points (%d) reached.\r\n", GPS_TRACKER_MAX_POINTS);
+                wireless_printf("[INAV] Max points (%d) reached.\r\n", INAV_TRACKER_MAX_POINTS);
             }
         }
     }
@@ -93,26 +138,26 @@ void gps_tracker_button_poll(void)
         {
             if(tracker_state == TRACKER_STATE_IDLE && tracker_point_count >= 2)
             {
-                // 计算起点→第二点的真北方位角
-                double azimuth_p0_p1 = get_two_points_azimuth(
-                    recorded_lat[0], recorded_lon[0],
-                    recorded_lat[1], recorded_lon[1]);
+                // 将起点（point 0）追加为最终目标，使小车回到起点
+                // 注意：point 0 始终是 (0,0)，即出发坐标
+                // 确保目标序列为: 1 → 2 → … → (count-1) → 0
+                // 我们不物理追加到数组，而是在 update 中特殊处理末尾
 
-                // 此刻车头对准第二点，quat_yaw_deg 对应该方位
-                // 真北方位 = quat_yaw_deg + heading_north_offset
-                heading_north_offset = (float)azimuth_p0_p1 - quat_yaw_deg;
+                // 重置推算坐标，从起点出发
+                inav_x      = 0.0f;
+                inav_y      = 0.0f;
+                inav_active = 1;
 
                 current_target_idx = 1;
                 tracker_state      = TRACKER_STATE_RUNNING;
-                target_speed       = GPS_TRACKER_CRUISE_SPEED;
+                target_speed       = INAV_TRACKER_CRUISE_SPEED;
 
-                wireless_printf("[TRACKER] Start. Points=%d az=%.1f yaw=%.1f offset=%.1f\r\n",
-                       tracker_point_count, (float)azimuth_p0_p1,
-                      quat_yaw_deg, heading_north_offset);
+                wireless_printf("[INAV] Start tracking. Points=%d heading_ref=%.1f\r\n",
+                                tracker_point_count, initial_heading_deg);
             }
             else if(tracker_point_count < 2)
             {
-                wireless_printf("[TRACKER] Need at least 2 points.\r\n");
+                wireless_printf("[INAV] Need at least 2 points (origin + 1).\r\n");
             }
         }
     }
@@ -123,8 +168,7 @@ void gps_tracker_button_poll(void)
 }
 
 //=============================================================================
-// 循迹更新（每次 GPS 数据刷新后调用，约 1Hz）
-// gnss_flag 由调用方清零，此函数只读 gnss 结构体
+// 循迹更新（在主循环中每 50ms 调用一次）
 //=============================================================================
 void gps_tracker_update(void)
 {
@@ -133,57 +177,77 @@ void gps_tracker_update(void)
         turn_diff_ext = 0;
         return;
     }
-    if(!gnss.state) return;  // GPS 无效时维持上次差速输出
 
-    double cur_lat = gnss.latitude;
-    double cur_lon = gnss.longitude;
+    float cur_x = inav_x;
+    float cur_y = inav_y;
 
-    double target_lat = recorded_lat[current_target_idx];
-    double target_lon = recorded_lon[current_target_idx];
+    // 确定当前目标坐标
+    // current_target_idx 范围：1 … tracker_point_count-1，之后回起点(0,0)
+    float target_x, target_y;
+    uint8 going_home = 0;
+    if(current_target_idx < tracker_point_count)
+    {
+        target_x = recorded_x[current_target_idx];
+        target_y = recorded_y[current_target_idx];
+    }
+    else
+    {
+        // 所有中间点已到达，目标为起点
+        target_x   = 0.0f;
+        target_y   = 0.0f;
+        going_home = 1;
+    }
 
-    // 到当前目标点距离 (m)
-    double dist = get_two_points_distance(cur_lat, cur_lon, target_lat, target_lon);
+    float dist = point_distance(cur_x, cur_y, target_x, target_y);
 
     // 到达判定
-    if(dist < GPS_TRACKER_ARRIVE_DIST)
+    if(dist < INAV_TRACKER_ARRIVE_DIST)
     {
-        wireless_printf("[TRACKER] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, (float)dist);
-        current_target_idx++;
+        wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
 
-        if(current_target_idx >= tracker_point_count)
+        if(going_home)
         {
+            // 回到起点，循迹完成
             tracker_state = TRACKER_STATE_DONE;
             target_speed  = 0.0f;
             turn_diff_ext = 0;
+            inav_active   = 0;
             led(on);
-            wireless_printf("[TRACKER] All points done.\r\n");
+            wireless_printf("[INAV] All points done. Back at origin.\r\n");
             return;
         }
 
-        target_lat = recorded_lat[current_target_idx];
-        target_lon = recorded_lon[current_target_idx];
-        dist = get_two_points_distance(cur_lat, cur_lon, target_lat, target_lon);
+        current_target_idx++;
+
+        // 更新目标
+        if(current_target_idx < tracker_point_count)
+        {
+            target_x = recorded_x[current_target_idx];
+            target_y = recorded_y[current_target_idx];
+        }
+        else
+        {
+            target_x   = 0.0f;
+            target_y   = 0.0f;
+            going_home = 1;
+        }
+        dist = point_distance(cur_x, cur_y, target_x, target_y);
     }
 
-    // 目标真北方位角 (0°=北，顺时针)
-    double bearing_true = get_two_points_azimuth(cur_lat, cur_lon, target_lat, target_lon);
+    // 目标方位角（相对于 initial_heading_deg 为 0° 的坐标系）
+    float bearing_local = point_bearing(cur_x, cur_y, target_x, target_y);
 
-    // 当前朝向（真北）= quat_yaw_deg + heading_north_offset
-    float current_heading = quat_yaw_deg + heading_north_offset;
+    // 当前车头相对初始航向的偏差（°）
+    float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
 
-    // 偏航误差（目标方位 - 当前朝向），规范化到 ±180°
-    float heading_err = normalize_angle((float)bearing_true - current_heading);
+    // 偏航误差
+    float heading_err = normalize_angle(bearing_local - current_heading_rel);
 
-    // 使用四元数偏航差分角速度（°/s）用于 D 项阻尼
-    float gyro_z_dps = quat_yaw_rate_dps;
-
-    // PD 控制输出差速（负→左转，正→右转，符合 car_motor_control 差速约定）
-    // 前进时 left_motor_duty 为负，+td 使其绝对值减小 → 左轮变慢 → 右转
-    // 因此 td 取反：need_left_turn(err>0) → td 负
-    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * gyro_z_dps);
+    // PD 控制输出差速
+    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
     turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
 
-    wireless_printf("[TRACKER] ->pt%d dist=%.1fm bear=%.1f hdg=%.1f err=%.1f td=%d\r\n",
-           current_target_idx, (float)dist, (float)bearing_true,
-           current_heading, heading_err, (int)turn_diff_ext);
+    wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f td=%d x=%.2f y=%.2f\r\n",
+                    current_target_idx, dist, bearing_local, current_heading_rel,
+                    heading_err, (int)turn_diff_ext, cur_x, cur_y);
 }

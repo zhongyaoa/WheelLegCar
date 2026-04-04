@@ -230,6 +230,7 @@ void wireless_uart_callback (void)
     if(uart_query_byte(WIRELESS_UART_INDEX, &wireless_uart_data))
     {
         fifo_write_buffer(&wireless_uart_fifo, &wireless_uart_data, 1);
+        my_wireless_optimizer(wireless_uart_data);
     }
 #if WIRELESS_UART_AUTO_BAUD_RATE                                                // 开启自动波特率
     if(WIRELESS_UART_AUTO_BAUD_RATE_START == wireless_auto_baud_flag && 3 == fifo_used(&wireless_uart_fifo))

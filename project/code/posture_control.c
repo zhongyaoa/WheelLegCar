@@ -1,4 +1,5 @@
 #include "posture_control.h"
+#include "math.h"
 
 uint32 sys_times = 0;
 uint8 system_time_state[20] = {0};
@@ -23,6 +24,13 @@ float imu_yaw_deg   = 0.0f;
 // 供外部只读的四元数偏航角（°）与差分角速度（°/s）
 float quat_yaw_deg = 0.0f;
 float quat_yaw_rate_dps = 0.0f;
+
+// 惯性导航推算位置（m），积分由 pit_call_back 每 1ms 执行
+// 坐标系由循迹模块在记录第一个点时确定
+float inav_x           = 0.0f;
+float inav_y           = 0.0f;
+uint8 inav_active      = 0;      // 1=积分开启，0=暂停
+float inav_heading_ref = 0.0f;   // 坐标系参考航向（°），X 轴正方向对应此航向
 
 int16 left_motor_duty = 0;
 int16 right_motor_duty = 0;
@@ -99,7 +107,7 @@ void car_steer_control(void)
     int16 steer_location_offset[4] = {0};
     int16 steer_target_offset[4] = {0};
 
-    static int16 jump_time_num[4] = {110, 110, 30, 100};  // 跳跃各阶段时间  起跳、收腿、准备缓冲、执行缓冲
+    static int16 jump_time_num[4] = {110, 80, 30, 100};  // 跳跃各阶段时间  原：起跳110、收腿110、准备缓冲30、执行缓冲100
 
     static float steer_balance_angle_count = 0;
     static float steer_output_duty_filter = 0;
@@ -151,10 +159,10 @@ void car_steer_control(void)
             if(jump_time < jump_time_num[0])                  // 起跳
             {
                 jump_flag = 1;
-                steer_duty_set(&steer_1, steer_1.center_num + 2500);
-                steer_duty_set(&steer_2, steer_2.center_num - 2500);
-                steer_duty_set(&steer_3, steer_3.center_num - 2500);
-                steer_duty_set(&steer_4, steer_4.center_num + 2500);
+                steer_duty_set(&steer_1, steer_1.center_num - 2500); //反向
+                steer_duty_set(&steer_2, steer_2.center_num + 2500);
+                steer_duty_set(&steer_3, steer_3.center_num + 2500);
+                steer_duty_set(&steer_4, steer_4.center_num - 2500);
             }
             else if(jump_time < (jump_time_num[0] + jump_time_num[1]))  // 收脚
             {
@@ -167,18 +175,18 @@ void car_steer_control(void)
             else if(jump_time < (jump_time_num[0] + jump_time_num[1] + jump_time_num[2]))  // 预备缓冲
             {
                 jump_flag = 3;
-                steer_duty_set(&steer_1, steer_1.center_num + 1400);
-                steer_duty_set(&steer_2, steer_2.center_num - 1400);
-                steer_duty_set(&steer_3, steer_3.center_num - 1400);
-                steer_duty_set(&steer_4, steer_4.center_num + 1400);
+                steer_duty_set(&steer_1, steer_1.center_num - 1400);
+                steer_duty_set(&steer_2, steer_2.center_num + 1400);
+                steer_duty_set(&steer_3, steer_3.center_num + 1400);
+                steer_duty_set(&steer_4, steer_4.center_num - 1400);
             }
             else if(jump_time < (jump_time_num[0] + jump_time_num[1] + jump_time_num[2] + jump_time_num[3]))  // 预备缓冲
             {
                 jump_flag = 4;
-                steer_duty_set(&steer_1, -14);
-                steer_duty_set(&steer_2, -14);
-                steer_duty_set(&steer_3, -14);
-                steer_duty_set(&steer_4, -14);
+                steer_duty_set(&steer_1, steer_1.center_num-14);
+                steer_duty_set(&steer_2, steer_1.center_num+14);
+                steer_duty_set(&steer_3, steer_1.center_num+14);
+                steer_duty_set(&steer_4, steer_1.center_num-14);
             }
             else
             {
@@ -225,6 +233,19 @@ void pit_call_back(void)
     }
     last_quat_yaw_deg = quat_yaw_deg;
     imu_yaw_deg = quat_yaw_deg;
+
+    // 惯性导航：每 1ms 用编码器速度 + 四元数航向积分推算位置
+    // car_speed = (left_spd - right_spd)/2，前进时左轮转速为负、右轮为正，故 car_speed < 0 表示前进
+    // 取反使 v_mps > 0 对应前进方向
+    if(inav_active)
+    {
+        float v_mps = -(float)car_speed / 60.0f * (WHEEL_CIRCUMFERENCE * 0.01f);  // cm→m，取反使前进为正
+        // 当前航向相对参考航向的偏差（rad）
+        float heading_rad = (quat_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
+        // Y 轴 = 参考航向方向（前进），X 轴 = 参考航向右侧 90°
+        inav_y += v_mps * cosf(heading_rad) * 0.001f;  // dt = 1ms
+        inav_x += v_mps * sinf(heading_rad) * 0.001f;
+    }
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
     {

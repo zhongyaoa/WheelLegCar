@@ -41,6 +41,13 @@ extern float imu_yaw_deg;
 extern float quat_yaw_deg;
 extern float quat_yaw_rate_dps;
 
+// 惯性导航推算位置（m），以 inav_heading_ref 方向为 X 轴正方向
+// inav_active = 1 时开始积分，由循迹模块控制
+extern float inav_x;
+extern float inav_y;
+extern uint8 inav_active;
+extern float inav_heading_ref;  // 坐标系参考航向（°），X 轴正方向对应此航向
+
 // 车辆控制主流程
 void car_state_calculate(void);
 void car_steer_control(void);

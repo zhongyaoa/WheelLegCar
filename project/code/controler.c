@@ -146,7 +146,7 @@ void my_wireless_optimizer(uint8 data)
         }
         else if('s' == data)
         {
-            target_speed = 50.0f; // 后退
+            led(toggle);
         }
         else if('a' == data)
         {
@@ -158,7 +158,7 @@ void my_wireless_optimizer(uint8 data)
         }
         else if('j' == data)
         {
-            roll_balance_cascade.posture_value.mechanical_zero += 1; // 增加机械偏置
+            jump_flag = 1; // 增加机械偏置
         }
         else if('k' == data)
         {

@@ -54,15 +54,12 @@ int main(void)
     imu660ra_init();
     steer_control_init();               // 舵机控制初始化
 
-    gnss_init(TAU1201);                 // GPS 初始化（UART2，P10_0/P10_1）
-
     button_init();                      // 按键初始化
     led_init();                         // LED 初始化
     led(off);
-    gps_tracker_init();                 // GPS 循迹模块初始化
-    wireless_uart_send_string("\r\n gps_tracker_init ok.");
-    wireless_printf("\r\n gps_tracker_init ok.");
-    wireless_printf("\r\n [UP]=记录点位  [LEFT]=开始循迹\r\n");
+    gps_tracker_init();                 // 惯性导航循迹模块初始化
+    wireless_printf("\r\n inav_tracker_init ok.\r\n");
+    wireless_printf("[UP]=记录点位（第1次锁定起点+航向）  [LEFT]=开始循迹\r\n");
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
 
@@ -70,20 +67,13 @@ int main(void)
 
     while(true)
     {
-        // 每 50ms 轮询一次按键（10ms * 5）
+        // 每 50ms 轮询一次按键与循迹更新
         btn_poll_tick++;
         if(btn_poll_tick >= 5)
         {
             btn_poll_tick = 0;
             gps_tracker_button_poll();
-        }
-
-        // GPS 串口中断已将数据写入缓冲并置 gnss_flag
-        if(gnss_flag)
-        {
-            gnss_flag = 0;
-            gnss_data_parse();          // 解析 NMEA 数据
-            gps_tracker_update();       // 循迹逻辑更新（约 1Hz）
+            gps_tracker_update();
         }
 
         system_delay_ms(10);
