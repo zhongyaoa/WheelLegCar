@@ -35,7 +35,7 @@
 
 #include "zf_common_headfile.h"
 #include "controler.h"
-#include "gps_tracker.h"
+#include "ins_tracker.h"
 // 打开新的工程或者工程移动了位置务必执行以下操作
 // 第一步 关闭上面所有打开的文件
 // 第二步 project->clean  等待下方进度条走完
@@ -57,7 +57,7 @@ int main(void)
     button_init();                      // 按键初始化
     led_init();                         // LED 初始化
     led(off);
-    gps_tracker_init();                 // 惯性导航循迹模块初始化
+    ins_tracker_init();                 // 惯性导航循迹模块初始化
     wireless_printf("\r\n inav_tracker_init ok.\r\n");
     wireless_printf("[UP]=记录点位（第1次锁定起点+航向）  [LEFT]=开始循迹\r\n");
 
@@ -72,8 +72,8 @@ int main(void)
         if(btn_poll_tick >= 5)
         {
             btn_poll_tick = 0;
-            gps_tracker_button_poll();
-            gps_tracker_update();
+            ins_tracker_button_poll();
+            ins_tracker_update();
         }
 
         system_delay_ms(10);

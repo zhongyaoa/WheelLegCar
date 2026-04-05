@@ -6,14 +6,19 @@
         - 循迹时用 quat_yaw_deg 控制方向，inav_x/inav_y 里程计判断换点
         - 最后一个目标为第 0 号点（起点），到达后停止
 */
-#ifndef _GPS_TRACKER_H_
-#define _GPS_TRACKER_H_
+#ifndef _INS_TRACKER_H_
+#define _INS_TRACKER_H_
 
 #include "zf_common_typedef.h"
 
-#define INAV_TRACKER_MAX_POINTS     10      // 最多记录点位数（含起点）
-#define INAV_TRACKER_ARRIVE_DIST    0.1f    // 到达判定距离 (m)
-#define INAV_TRACKER_CRUISE_SPEED   (-120.0f) // 循迹前进速度（负值=前进，与 target_speed 约定一致）
+#define INAV_TRACKER_MAX_POINTS        20         // 最多记录点位数（含起点）
+#define INAV_TRACKER_ARRIVE_DIST       0.1f       // 到达判定距离 (m)
+#define INAV_TRACKER_CRUISE_SPEED      (-1500.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
+#define INAV_TRACKER_MIN_SPEED         (-120.0f)  // 最低循迹速度，避免转向时完全没速度
+#define INAV_TRACKER_SLOWDOWN_DIST     0.8f       // 距离小于该值时开始按距离降速 (m)
+#define INAV_TRACKER_TURN_SLOWDOWN_ANG 35.0f      // 转角大于该值时开始按角度降速 (deg)
+#define INAV_TRACKER_TURN_STOP_ANG     80.0f      // 转角接近该值时降到最低速度 (deg)
+#define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量
 
 typedef enum
 {
@@ -26,12 +31,12 @@ extern tracker_state_enum tracker_state;
 extern uint8 tracker_point_count;
 
 // 在主循环中轮询按键（建议每 50ms 调用一次）
-void gps_tracker_button_poll(void);
+void ins_tracker_button_poll(void);
 
 // 在主循环中周期调用以更新循迹逻辑（每 50ms 与按键轮询同频即可）
-void gps_tracker_update(void);
+void ins_tracker_update(void);
 
 // 初始化循迹模块
-void gps_tracker_init(void);
+void ins_tracker_init(void);
 
 #endif

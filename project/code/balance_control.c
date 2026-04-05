@@ -149,7 +149,7 @@ void quaternion_module_calculate(cascade_value_struct *cascade_value)
     float ki = cascade_value->posture_value.correct_ki;
 
     // 首次计算的前 0.1 秒，使用大比例系数加速收敛
-    if (first_count_time < 0.1f)
+    if (first_count_time < 0.5f)
     {
         first_count_time += cascade_value->posture_value.call_cycle; // 累加时间
         
@@ -328,7 +328,7 @@ void balance_cascade_init (void)
 {
     // 初始化俯仰平衡控制的姿态参数
     roll_balance_cascade.posture_value.call_cycle      = 0.001;     // 调用周期 0.001s (1ms)
-    roll_balance_cascade.posture_value.mechanical_zero = -8.0f;     // 机械零点初始化为 0 (此处代码赋值为-4.0f)
+    roll_balance_cascade.posture_value.mechanical_zero = -8.5f;     // 机械零点初始化为 0 (此处代码赋值为-4.0f)
     roll_balance_cascade.posture_value.correct_kp      = 0.4f;      // 姿态校准比例系数 0.4
     roll_balance_cascade.posture_value.correct_ki      = 0.015f;    // 姿态校准积分系数 0.015
 

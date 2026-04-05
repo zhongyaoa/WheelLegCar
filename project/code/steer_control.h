@@ -11,7 +11,7 @@
 #define STEER_2_PWM        (TCPWM_CH12_P01_0)    // 舵机控制引脚   注：右上舵机TCPWM_CH12_P01_0
 #define STEER_2_FRE        (300)                 // 舵机控制频率
 #define STEER_2_DIR        (-1)                  // 舵机旋转方向(车体升高方向)
-#define STEER_2_CENTER     (4500)                // 舵机中心值(初始保持位置，大腿水平)
+#define STEER_2_CENTER     (4300)                // 舵机中心值(初始保持位置，大腿水平)
 
 #define STEER_3_PWM        (TCPWM_CH11_P01_1)    // 舵机控制引脚   注：左下舵机(TCPWM_CH11_P01_1
 #define STEER_3_FRE        (300)                 // 舵机控制频率
@@ -21,7 +21,7 @@
 #define STEER_4_PWM        (TCPWM_CH13_P00_3)    // 舵机控制引脚   注：右下舵机 TCPWM_CH13_P00_3
 #define STEER_4_FRE        (300)                 // 舵机控制频率
 #define STEER_4_DIR        (1)                   // 舵机旋转方向(车体升高方向)
-#define STEER_4_CENTER     (4500)                // 舵机中心值(初始保持位置，大腿水平)
+#define STEER_4_CENTER     (4700)                // 舵机中心值(初始保持位置，大腿水平)
 
 typedef struct
 {

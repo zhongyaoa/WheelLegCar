@@ -1,4 +1,4 @@
-#include "gps_tracker.h"
+#include "ins_tracker.h"
 #include "posture_control.h"
 #include "controler.h"
 #include "math.h"
@@ -45,6 +45,54 @@ static float point_distance(float x0, float y0, float x1, float y1)
 }
 
 //=============================================================================
+// 根据距离与转角计算自适应循迹速度
+// 距离越近、转角越大，速度越低
+//=============================================================================
+static float tracker_calc_target_speed(float dist, float heading_err)
+{
+    float abs_heading_err = fabsf(heading_err);
+    float distance_ratio = func_limit_ab(dist / INAV_TRACKER_SLOWDOWN_DIST, 0.0f, 1.0f);
+    float angle_ratio;
+    float speed_scale;
+
+    if(abs_heading_err <= INAV_TRACKER_TURN_SLOWDOWN_ANG)
+    {
+        angle_ratio = 1.0f;
+    }
+    else if(abs_heading_err >= INAV_TRACKER_TURN_STOP_ANG)
+    {
+        angle_ratio = 0.0f;
+    }
+    else
+    {
+        angle_ratio = 1.0f - (abs_heading_err - INAV_TRACKER_TURN_SLOWDOWN_ANG)
+                            / (INAV_TRACKER_TURN_STOP_ANG - INAV_TRACKER_TURN_SLOWDOWN_ANG);
+    }
+
+    speed_scale = distance_ratio * angle_ratio;
+    return INAV_TRACKER_MIN_SPEED + (INAV_TRACKER_CRUISE_SPEED - INAV_TRACKER_MIN_SPEED) * speed_scale;
+}
+
+//=============================================================================
+// 对目标速度做斜坡限制，避免速度指令跳变
+//=============================================================================
+static float tracker_ramp_target_speed(float current_speed, float desired_speed)
+{
+    float delta = desired_speed - current_speed;
+
+    if(delta > INAV_TRACKER_SPEED_RAMP_STEP)
+    {
+        delta = INAV_TRACKER_SPEED_RAMP_STEP;
+    }
+    else if(delta < -INAV_TRACKER_SPEED_RAMP_STEP)
+    {
+        delta = -INAV_TRACKER_SPEED_RAMP_STEP;
+    }
+
+    return current_speed + delta;
+}
+
+//=============================================================================
 // 从 (x0,y0) 到 (x1,y1) 的方位角（°），以初始航向为 0°，顺时针为正
 // 坐标系：X 轴正方向 = initial_heading_deg 方向
 //=============================================================================
@@ -62,7 +110,7 @@ static float point_bearing(float x0, float y0, float x1, float y1)
 //=============================================================================
 // 初始化
 //=============================================================================
-void gps_tracker_init(void)
+void ins_tracker_init(void)
 {
     tracker_state         = TRACKER_STATE_IDLE;
     tracker_point_count   = 0;
@@ -79,7 +127,7 @@ void gps_tracker_init(void)
 //=============================================================================
 // 主循环轮询按键（每 50ms 调用一次）
 //=============================================================================
-void gps_tracker_button_poll(void)
+void ins_tracker_button_poll(void)
 {
     // ---- button_up：记录点位 ----
     if(button_press(UP))
@@ -150,7 +198,7 @@ void gps_tracker_button_poll(void)
 
                 current_target_idx = 1;
                 tracker_state      = TRACKER_STATE_RUNNING;
-                target_speed       = INAV_TRACKER_CRUISE_SPEED;
+                target_speed       = INAV_TRACKER_MIN_SPEED;
 
                 wireless_printf("[INAV] Start tracking. Points=%d heading_ref=%.1f\r\n",
                                 tracker_point_count, initial_heading_deg);
@@ -170,7 +218,7 @@ void gps_tracker_button_poll(void)
 //=============================================================================
 // 循迹更新（在主循环中每 50ms 调用一次）
 //=============================================================================
-void gps_tracker_update(void)
+void ins_tracker_update(void)
 {
     if(tracker_state != TRACKER_STATE_RUNNING)
     {
@@ -243,11 +291,15 @@ void gps_tracker_update(void)
     // 偏航误差
     float heading_err = normalize_angle(bearing_local - current_heading_rel);
 
+    // 按距离与转角自适应调速：离目标越近、转弯越大，速度越低
+    float desired_speed = tracker_calc_target_speed(dist, heading_err);
+    target_speed = tracker_ramp_target_speed(target_speed, desired_speed);
+
     // PD 控制输出差速
     int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
     turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
 
-    wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f td=%d x=%.2f y=%.2f\r\n",
+    wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
                     current_target_idx, dist, bearing_local, current_heading_rel,
-                    heading_err, (int)turn_diff_ext, cur_x, cur_y);
+                    heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
 }
