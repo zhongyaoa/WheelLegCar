@@ -159,10 +159,10 @@ void car_steer_control(void)
             if(jump_time < jump_time_num[0])                  // 起跳
             {
                 jump_flag = 1;
-                steer_duty_set(&steer_1, steer_1.center_num - 2500); //反向
-                steer_duty_set(&steer_2, steer_2.center_num + 2500);
-                steer_duty_set(&steer_3, steer_3.center_num + 2500);
-                steer_duty_set(&steer_4, steer_4.center_num - 2500);
+                steer_duty_set(&steer_1, steer_1.center_num + 2500); //反向
+                steer_duty_set(&steer_2, steer_2.center_num - 2500);
+                steer_duty_set(&steer_3, steer_3.center_num - 2500);
+                steer_duty_set(&steer_4, steer_4.center_num + 2500);
             }
             else if(jump_time < (jump_time_num[0] + jump_time_num[1]))  // 收脚
             {
@@ -175,18 +175,18 @@ void car_steer_control(void)
             else if(jump_time < (jump_time_num[0] + jump_time_num[1] + jump_time_num[2]))  // 预备缓冲
             {
                 jump_flag = 3;
-                steer_duty_set(&steer_1, steer_1.center_num - 1400);
-                steer_duty_set(&steer_2, steer_2.center_num + 1400);
-                steer_duty_set(&steer_3, steer_3.center_num + 1400);
-                steer_duty_set(&steer_4, steer_4.center_num - 1400);
+                steer_duty_set(&steer_1, steer_1.center_num + 1400);
+                steer_duty_set(&steer_2, steer_2.center_num - 1400);
+                steer_duty_set(&steer_3, steer_3.center_num - 1400);
+                steer_duty_set(&steer_4, steer_4.center_num + 1400);
             }
             else if(jump_time < (jump_time_num[0] + jump_time_num[1] + jump_time_num[2] + jump_time_num[3]))  // 预备缓冲
             {
                 jump_flag = 4;
-                steer_duty_set(&steer_1, steer_1.center_num-14);
-                steer_duty_set(&steer_2, steer_1.center_num+14);
-                steer_duty_set(&steer_3, steer_1.center_num+14);
-                steer_duty_set(&steer_4, steer_1.center_num-14);
+                steer_duty_set(&steer_1, steer_1.center_num+14);
+                steer_duty_set(&steer_2, steer_1.center_num-14);
+                steer_duty_set(&steer_3, steer_1.center_num-14);
+                steer_duty_set(&steer_4, steer_1.center_num+14);
             }
             else
             {
@@ -249,8 +249,8 @@ void pit_call_back(void)
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
     {
-        car_speed = (motor_value.receive_left_speed_data - motor_value.receive_right_speed_data) / 2;  //向前走时left_motor_duty为负, right_motor_duty为正, 计算车辆速度：左右电机速度差的一半
-        //car_speed = (motor_value.receive_right_speed_data - motor_value.receive_left_speed_data) / 2;  // 计算车辆速度：左右电机速度差的一半
+        //car_speed = (motor_value.receive_left_speed_data - motor_value.receive_right_speed_data) / 2;  //
+        car_speed = (motor_value.receive_right_speed_data - motor_value.receive_left_speed_data) / 2;  // 向前走时left_motor_duty为负, right_motor_duty为正, 计算车辆速度：左右电机速度差的一半
         pid_control(&roll_balance_cascade.speed_cycle, target_speed, (float)car_speed);  // 速度环 PID 控制，目标值为 0.0 f
     }
 
