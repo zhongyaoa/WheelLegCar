@@ -11,9 +11,9 @@
 
 #include "zf_common_typedef.h"
 
-#define INAV_TRACKER_MAX_POINTS        20         // 最多记录点位数（含起点）
+#define INAV_TRACKER_MAX_POINTS        40         // 最多记录点位数（含起点，需容纳去程+回程）
 #define INAV_TRACKER_ARRIVE_DIST       0.1f       // 到达判定距离 (m)
-#define INAV_TRACKER_CRUISE_SPEED      (1500.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
+#define INAV_TRACKER_CRUISE_SPEED      (300.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
 #define INAV_TRACKER_MIN_SPEED         (20.0f)  // 最低循迹速度，避免转向时完全没速度
 #define INAV_TRACKER_SLOWDOWN_DIST     1.0f       // 距离小于该值时开始按距离降速 (m)
 #define INAV_TRACKER_TURN_SLOWDOWN_ANG 25.0f      // 转角大于该值时开始按角度降速 (deg)
@@ -38,5 +38,11 @@ void ins_tracker_update(void);
 
 // 初始化循迹模块
 void ins_tracker_init(void);
+
+// 外部注入航点并启动循迹（由 UI 在发车时调用）
+// points: 航点坐标数组（按行驶顺序排列）
+// count:  航点个数（含起点，至少 2 个）
+// 调用后 tracker_state 自动变为 TRACKER_STATE_RUNNING
+void ins_tracker_start_with_points(const float *px, const float *py, uint8 count);
 
 #endif

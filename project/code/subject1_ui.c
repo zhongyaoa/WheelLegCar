@@ -1,20 +1,23 @@
 /*
     科目一 UI 模块实现 —— 绕桩前进
     ─────────────────────────────────────────────────────────
-    功能概述：
-      1. 首页选择科目一
-      2. 采集三种点位（起点 / 调头点 / 桩位点）
-      3. 预览路线图（含绕桩路线绘制）
-      4. 发车行进、完成
+    轨迹规则：
+      去程: 起点 S  ─── 直线 ───  调头点 T
+      回程: 调头点 T ─── 蛇形绕桩 ─── 起点 S
+            桩必须左右交替（第1桩在左则第2桩在右，反之亦然）
+      因此恰好存在两条合法路线：
+        路线A: 回程首桩在车左侧
+        路线B: 回程首桩在车右侧
     ─────────────────────────────────────────────────────────
     屏幕: IPS200  240(W) x 320(H)  竖屏
-    按键: UP / DOWN / LEFT / NE / SE / SW
+    按键: UP / DOWN / LEFT / SE / SW  (NE 已损坏，不使用)
     ─────────────────────────────────────────────────────────
 */
 
 #include "subject1_ui.h"
 #include "controler.h"
 #include "posture_control.h"
+#include "ins_tracker.h"
 #include "zf_common_headfile.h"
 #include <math.h>
 #include <string.h>
@@ -24,16 +27,16 @@
 #define COLOR_TITLE        RGB565_WHITE
 #define COLOR_TEXT          RGB565_WHITE
 #define COLOR_HIGHLIGHT    RGB565_YELLOW
-#define COLOR_START_PT     RGB565_GREEN     // 起点颜色
-#define COLOR_TURN_PT      RGB565_RED       // 调头点颜色
-#define COLOR_CONE_PT      RGB565_ORANGE    // 桩位点颜色（橙色近似）
-#define COLOR_ROUTE_FWD    RGB565_66CCFF    // 去程路线
-#define COLOR_ROUTE_RET    RGB565_PURPLE    // 回程路线
-#define COLOR_CAR          RGB565_GREEN     // 行进中小车标记
-#define COLOR_SELECTED     RGB565_YELLOW    // 选中项高亮
-#define COLOR_GRID         0x2104           // 暗灰网格
+#define COLOR_START_PT     RGB565_GREEN
+#define COLOR_TURN_PT      RGB565_RED
+#define COLOR_CONE_PT      RGB565_ORANGE
+#define COLOR_ROUTE_FWD    RGB565_66CCFF     // 去程（直线）
+#define COLOR_ROUTE_A      RGB565_GREEN      // 路线A
+#define COLOR_ROUTE_B      RGB565_PURPLE     // 路线B
+#define COLOR_ROUTE_DIM    0x4208            // 未选中路线（暗灰）
+#define COLOR_CAR          RGB565_GREEN
+#define COLOR_SELECTED     RGB565_YELLOW
 
-// 橙色和紫色的 RGB565 近似值
 #ifndef RGB565_ORANGE
 #define RGB565_ORANGE      0xFD20
 #endif
@@ -44,36 +47,40 @@
 // ===================== IPS200 屏幕接口类型 =====================
 #define IPS200_TYPE        (IPS200_TYPE_SPI)
 
+// ===================== 绕桩偏移距离 (m) =====================
+#define CONE_BYPASS_DIST   0.35f   // 绕桩时偏离桩位的横向距离
+
 // ===================== 全局状态 =====================
 ui_state_enum  s1_ui_state        = UI_STATE_HOME;
 waypoint_t     s1_waypoints[S1_MAX_WAYPOINTS];
 uint8          s1_waypoint_count  = 0;
 
 // ===================== 内部状态 =====================
-static point_type_enum s1_cur_point_type = POINT_TYPE_START;   // 当前选择的点类型
-static uint8  s1_has_start  = 0;   // 是否已记录起点
-static uint8  s1_has_turn   = 0;   // 是否已记录调头点
-static uint8  s1_screen_dirty = 1; // 是否需要重绘屏幕
+static point_type_enum s1_cur_point_type = POINT_TYPE_START;
+static uint8  s1_has_start  = 0;
+static uint8  s1_has_turn   = 0;
+static uint8  s1_screen_dirty = 1;
 
-// 按键消抖计数（每次 poll 约 50ms）
+// 路线选择: 0 = 路线A（首桩左绕）, 1 = 路线B（首桩右绕）
+static uint8  s1_route_sel  = 0;
+
+// 按键消抖计数
 static uint32 btn_up_cnt   = 0;
 static uint32 btn_down_cnt = 0;
 static uint32 btn_left_cnt = 0;
-static uint32 btn_ne_cnt   = 0;
 static uint32 btn_se_cnt   = 0;
 static uint32 btn_sw_cnt   = 0;
 
 // 行进中刷新降频
 static uint32 run_display_cnt = 0;
 
-// ===================== 按键边沿检测宏 =====================
-// 返回 1 表示本次为上升沿（第一次按下）
+// ===================== 按键边沿检测 =====================
 static uint8 btn_rising(Button bt, uint32 *cnt)
 {
     if(button_press(bt))
     {
         (*cnt)++;
-        if(*cnt == 1) return 1;   // 上升沿
+        if(*cnt == 1) return 1;
         return 0;
     }
     else
@@ -83,7 +90,6 @@ static uint8 btn_rising(Button bt, uint32 *cnt)
     }
 }
 
-// 长按检测（hold_ticks * 50ms = 所需时长）
 static uint8 btn_long_press(Button bt, uint32 *cnt, uint32 hold_ticks)
 {
     if(button_press(bt))
@@ -99,7 +105,7 @@ static uint8 btn_long_press(Button bt, uint32 *cnt, uint32 hold_ticks)
     }
 }
 
-// ===================== 点类型名称 =====================
+// ===================== 点类型辅助 =====================
 static const char* point_type_name(point_type_enum t)
 {
     switch(t)
@@ -134,116 +140,150 @@ static uint16 point_type_color(point_type_enum t)
 }
 
 // ===================== 绘制辅助 =====================
-
-// 画一个实心小方块（模拟粗点）
 static void draw_dot(uint16 cx, uint16 cy, uint16 radius, uint16 color)
 {
     uint16 x, y;
     for(y = cy - radius; y <= cy + radius; y++)
-    {
         for(x = cx - radius; x <= cx + radius; x++)
-        {
             if(x < 240 && y < 320)
-            {
                 ips200_draw_point(x, y, color);
-            }
-        }
-    }
 }
 
-// 画一个空心圆圈（Bresenham 简化版）
 static void draw_circle(uint16 cx, uint16 cy, uint16 r, uint16 color)
 {
     int16 x = 0, y = (int16)r;
     int16 d = 1 - (int16)r;
-
     while(x <= y)
     {
-        ips200_draw_point((uint16)(cx + x), (uint16)(cy + y), color);
-        ips200_draw_point((uint16)(cx - x), (uint16)(cy + y), color);
-        ips200_draw_point((uint16)(cx + x), (uint16)(cy - y), color);
-        ips200_draw_point((uint16)(cx - x), (uint16)(cy - y), color);
-        ips200_draw_point((uint16)(cx + y), (uint16)(cy + x), color);
-        ips200_draw_point((uint16)(cx - y), (uint16)(cy + x), color);
-        ips200_draw_point((uint16)(cx + y), (uint16)(cy - x), color);
-        ips200_draw_point((uint16)(cx - y), (uint16)(cy - x), color);
-
-        if(d < 0)
-        {
-            d += 2 * x + 3;
-        }
-        else
-        {
-            d += 2 * (x - y) + 5;
-            y--;
-        }
+        ips200_draw_point((uint16)(cx+x),(uint16)(cy+y),color);
+        ips200_draw_point((uint16)(cx-x),(uint16)(cy+y),color);
+        ips200_draw_point((uint16)(cx+x),(uint16)(cy-y),color);
+        ips200_draw_point((uint16)(cx-x),(uint16)(cy-y),color);
+        ips200_draw_point((uint16)(cx+y),(uint16)(cy+x),color);
+        ips200_draw_point((uint16)(cx-y),(uint16)(cy+x),color);
+        ips200_draw_point((uint16)(cx+y),(uint16)(cy-x),color);
+        ips200_draw_point((uint16)(cx-y),(uint16)(cy-x),color);
+        if(d < 0) d += 2*x + 3;
+        else { d += 2*(x-y) + 5; y--; }
         x++;
     }
 }
 
 // =========================================================================
-//  HOME 页面：显示科目选择菜单
+//  绕桩航点生成
+//  输入: 桩位坐标数组 cone_x/y[0..cone_count-1]（回程顺序，即离调头点最近的在前）
+//        from_x/y = 出发点（调头点），to_x/y = 终点（起点）
+//        first_side: +1 = 首桩从左边绕, -1 = 首桩从右边绕
+//  输出: out_x/y[] 填充绕桩航点，返回航点数
+//
+//  算法: 对每个桩，计算从上一个航点到下一个航点的行进方向，
+//        取其法线方向偏移桩位坐标，交替左右。
+// =========================================================================
+static uint8 generate_bypass_route(
+    const float *cone_x, const float *cone_y, uint8 cone_count,
+    float from_x, float from_y,
+    float to_x,   float to_y,
+    int8  first_side,
+    float *out_x,  float *out_y)
+{
+    uint8 out_count = 0;
+    uint8 i;
+    int8  side = first_side;  // +1=左偏, -1=右偏
+
+    // [0] = 出发点（调头点）
+    out_x[out_count] = from_x;
+    out_y[out_count] = from_y;
+    out_count++;
+
+    for(i = 0; i < cone_count; i++)
+    {
+        // 确定行进方向: 从前一个点到后一个点
+        float prev_x, prev_y, next_x, next_y;
+        prev_x = (i == 0) ? from_x : cone_x[i - 1];
+        prev_y = (i == 0) ? from_y : cone_y[i - 1];
+        next_x = (i == cone_count - 1) ? to_x : cone_x[i + 1];
+        next_y = (i == cone_count - 1) ? to_y : cone_y[i + 1];
+
+        float dir_x = next_x - prev_x;
+        float dir_y = next_y - prev_y;
+        float len = sqrtf(dir_x * dir_x + dir_y * dir_y);
+        if(len < 0.001f) len = 0.001f;
+        // 单位方向
+        dir_x /= len;
+        dir_y /= len;
+
+        // 法线: 左手法线 (-dir_y, dir_x) 为行进方向左侧
+        float nx = -dir_y;
+        float ny =  dir_x;
+
+        // 偏移: side>0 往左偏, side<0 往右偏
+        out_x[out_count] = cone_x[i] + side * CONE_BYPASS_DIST * nx;
+        out_y[out_count] = cone_y[i] + side * CONE_BYPASS_DIST * ny;
+        out_count++;
+
+        side = -side;  // 交替
+    }
+
+    // 最后一个点: 终点（起点）
+    out_x[out_count] = to_x;
+    out_y[out_count] = to_y;
+    out_count++;
+
+    return out_count;
+}
+
+// =========================================================================
+//  HOME 页面
 // =========================================================================
 static void draw_home(void)
 {
     ips200_full(COLOR_BG);
-
-    // 标题
     ips200_set_color(COLOR_TITLE, COLOR_BG);
-    ips200_show_string(40, 30,  "WHEEL-LEG  CAR");
-    ips200_show_string(40, 55,  "--------------");
+    ips200_show_string(40, 30, "WHEEL-LEG  CAR");
+    ips200_show_string(40, 55, "--------------");
 
-    // 菜单条目
     ips200_set_color(COLOR_SELECTED, COLOR_BG);
     ips200_show_string(30, 100, "> Subject 1");
     ips200_set_color(COLOR_TEXT, COLOR_BG);
     ips200_show_string(40, 118, "Slalom Course");
 
-    ips200_set_color(0x8410, COLOR_BG);  // 灰色，尚未开放
+    ips200_set_color(0x8410, COLOR_BG);
     ips200_show_string(30, 160, "  Subject 2");
     ips200_show_string(40, 178, "(Coming Soon)");
-
     ips200_show_string(30, 210, "  Subject 3");
     ips200_show_string(40, 228, "(Coming Soon)");
 
-    // 底部提示
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(20, 296, "[UP] Enter Subject 1");
 }
 
 // =========================================================================
-//  COLLECT 页面：显示采集信息
+//  COLLECT 页面
 // =========================================================================
 static void draw_collect(void)
 {
     uint8 i;
-
     ips200_full(COLOR_BG);
 
-    // 标题
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(20, 4, "== Collect Points ==");
 
-    // 当前选择的点位类型
     ips200_set_color(point_type_color(s1_cur_point_type), COLOR_BG);
     ips200_show_string(8, 28, "Type:");
     ips200_show_string(56, 28, point_type_name(s1_cur_point_type));
 
-    // 状态标志
     ips200_set_color(COLOR_TEXT, COLOR_BG);
     ips200_show_string(140, 28, "S:");
     ips200_show_string(164, 28, s1_has_start ? "Y" : "N");
     ips200_show_string(180, 28, "T:");
     ips200_show_string(204, 28, s1_has_turn  ? "Y" : "N");
 
-    // 当前惯导坐标
     ips200_set_color(COLOR_TEXT, COLOR_BG);
     ips200_show_string(8,  48, "X:");
     ips200_show_float(28,  48, inav_x, 3, 2);
     ips200_show_string(120, 48, "Y:");
     ips200_show_float(140, 48, inav_y, 3, 2);
 
-    // 已记录点位列表（最多显示 10 行）
     ips200_set_color(COLOR_TITLE, COLOR_BG);
     ips200_show_string(8, 72, "# Type   X      Y");
     ips200_draw_line(8, 88, 232, 88, 0x4208);
@@ -252,167 +292,193 @@ static void draw_collect(void)
     {
         uint16 row_y = 92 + i * 16;
         ips200_set_color(point_type_color(s1_waypoints[i].type), COLOR_BG);
-
-        // 序号
         ips200_show_uint(8,  row_y, i, 2);
-        // 类型字符
         ips200_show_char(36, row_y, point_type_char(s1_waypoints[i].type));
-        // 坐标
         ips200_show_float(60,  row_y, s1_waypoints[i].x, 3, 2);
         ips200_show_float(150, row_y, s1_waypoints[i].y, 3, 2);
     }
 
-    // 总数
     ips200_set_color(COLOR_TEXT, COLOR_BG);
-    ips200_show_string(8,  260, "Total:");
+    ips200_show_string(8, 260, "Total:");
     ips200_show_uint(60, 260, s1_waypoint_count, 2);
 
-    // 底部操作提示
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
-    ips200_show_string(0,  280, "UP:Add DOWN:Type");
-    ips200_show_string(0,  296, "NE:Done SE:Del SW:Back");
+    ips200_show_string(0, 280, "UP:Add DOWN:Type");
+    ips200_show_string(0, 296, "LEFT:Done SE:Del SW:Bk");
 }
 
 // =========================================================================
-//  PREVIEW 页面：绘制完整路线图
-//  路线逻辑：起点 → 桩1 → 桩2 → … → 桩N → 调头点
-//           调头点 → 桩N → … → 桩2 → 桩1 → 起点
-//  绕桩方式：去程从左侧绕，回程从右侧绕（偏移绘制模拟绕桩弧线）
+//  PREVIEW 页面 —— 同时画出两条路线，用户选择
 // =========================================================================
+#define MAP_X0     10
+#define MAP_Y0     24
+#define MAP_W      220
+#define MAP_H      230
 
-// 路线绘图区域
-#define MAP_X0     10      // 地图区左上角 X
-#define MAP_Y0     30      // 地图区左上角 Y
-#define MAP_W      220     // 地图区宽度
-#define MAP_H      250     // 地图区高度
+// 内部临时存储: 提取出各类点索引供 preview/launch 共用
+static int16  s1_start_idx;
+static int16  s1_turn_idx;
+static int16  s1_cone_indices[S1_MAX_WAYPOINTS];
+static uint8  s1_cone_count;
+
+// 回程桩序列（从调头点往回走的顺序 = 采集顺序倒序）
+static float  s1_ret_cone_x[S1_MAX_WAYPOINTS];
+static float  s1_ret_cone_y[S1_MAX_WAYPOINTS];
+
+// 两条路线的绕桩航点
+static float  s1_routeA_x[S1_MAX_WAYPOINTS * 2 + 4];
+static float  s1_routeA_y[S1_MAX_WAYPOINTS * 2 + 4];
+static uint8  s1_routeA_count;
+static float  s1_routeB_x[S1_MAX_WAYPOINTS * 2 + 4];
+static float  s1_routeB_y[S1_MAX_WAYPOINTS * 2 + 4];
+static uint8  s1_routeB_count;
+
+static void prepare_routes(void)
+{
+    uint8 i;
+    int16 j;
+
+    // 提取各类点
+    s1_start_idx = -1;
+    s1_turn_idx  = -1;
+    s1_cone_count = 0;
+    for(i = 0; i < s1_waypoint_count; i++)
+    {
+        switch(s1_waypoints[i].type)
+        {
+            case POINT_TYPE_START: s1_start_idx = i; break;
+            case POINT_TYPE_TURN:  s1_turn_idx  = i; break;
+            case POINT_TYPE_CONE:  s1_cone_indices[s1_cone_count++] = i; break;
+        }
+    }
+
+    if(s1_start_idx < 0 || s1_turn_idx < 0) return;
+
+    float start_x = s1_waypoints[s1_start_idx].x;
+    float start_y = s1_waypoints[s1_start_idx].y;
+    float turn_x  = s1_waypoints[s1_turn_idx].x;
+    float turn_y  = s1_waypoints[s1_turn_idx].y;
+
+    // 回程桩序列: 采集顺序即回程经过顺序（用户按回程先后打点）
+    for(i = 0; i < s1_cone_count; i++)
+    {
+        s1_ret_cone_x[i] = s1_waypoints[s1_cone_indices[i]].x;
+        s1_ret_cone_y[i] = s1_waypoints[s1_cone_indices[i]].y;
+    }
+
+    // 路线A: 首桩左绕 (+1)
+    s1_routeA_count = generate_bypass_route(
+        s1_ret_cone_x, s1_ret_cone_y, s1_cone_count,
+        turn_x, turn_y, start_x, start_y,
+        +1, s1_routeA_x, s1_routeA_y);
+
+    // 路线B: 首桩右绕 (-1)
+    s1_routeB_count = generate_bypass_route(
+        s1_ret_cone_x, s1_ret_cone_y, s1_cone_count,
+        turn_x, turn_y, start_x, start_y,
+        -1, s1_routeB_x, s1_routeB_y);
+}
 
 static void draw_preview(void)
 {
     uint8 i;
-    int16 j;
     float min_x, max_x, min_y, max_y;
     float range_x, range_y, scale;
     float offset_x, offset_y;
 
     ips200_full(COLOR_BG);
 
-    // 标题
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
-    ips200_show_string(20, 4, "== Route Preview ==");
+    ips200_show_string(20, 2, "== Select Route ==");
 
-    if(s1_waypoint_count < 2)
+    if(s1_start_idx < 0 || s1_turn_idx < 0 || s1_waypoint_count < 2)
     {
         ips200_set_color(COLOR_TEXT, COLOR_BG);
         ips200_show_string(40, 150, "Not enough pts!");
         return;
     }
 
-    // ─── 计算坐标范围（自动缩放适配屏幕） ───
+    // ─── 计算坐标范围（包含所有原始点 + 两条路线的偏移点）───
     min_x = max_x = s1_waypoints[0].x;
     min_y = max_y = s1_waypoints[0].y;
-    for(i = 1; i < s1_waypoint_count; i++)
+    for(i = 0; i < s1_waypoint_count; i++)
     {
         if(s1_waypoints[i].x < min_x) min_x = s1_waypoints[i].x;
         if(s1_waypoints[i].x > max_x) max_x = s1_waypoints[i].x;
         if(s1_waypoints[i].y < min_y) min_y = s1_waypoints[i].y;
         if(s1_waypoints[i].y > max_y) max_y = s1_waypoints[i].y;
     }
+    for(i = 0; i < s1_routeA_count; i++)
+    {
+        if(s1_routeA_x[i] < min_x) min_x = s1_routeA_x[i];
+        if(s1_routeA_x[i] > max_x) max_x = s1_routeA_x[i];
+        if(s1_routeA_y[i] < min_y) min_y = s1_routeA_y[i];
+        if(s1_routeA_y[i] > max_y) max_y = s1_routeA_y[i];
+    }
+    for(i = 0; i < s1_routeB_count; i++)
+    {
+        if(s1_routeB_x[i] < min_x) min_x = s1_routeB_x[i];
+        if(s1_routeB_x[i] > max_x) max_x = s1_routeB_x[i];
+        if(s1_routeB_y[i] < min_y) min_y = s1_routeB_y[i];
+        if(s1_routeB_y[i] > max_y) max_y = s1_routeB_y[i];
+    }
 
-    // 扩展边界留 10% 边距
     range_x = max_x - min_x;
     range_y = max_y - min_y;
     if(range_x < 0.1f) range_x = 1.0f;
     if(range_y < 0.1f) range_y = 1.0f;
-    min_x -= range_x * 0.1f;
-    max_x += range_x * 0.1f;
-    min_y -= range_y * 0.1f;
-    max_y += range_y * 0.1f;
+    min_x -= range_x * 0.15f;
+    max_x += range_x * 0.15f;
+    min_y -= range_y * 0.15f;
+    max_y += range_y * 0.15f;
     range_x = max_x - min_x;
     range_y = max_y - min_y;
 
-    // 等比缩放
     {
         float scale_x = (float)MAP_W / range_x;
         float scale_y = (float)MAP_H / range_y;
         scale = (scale_x < scale_y) ? scale_x : scale_y;
     }
-
-    // 居中偏移
     offset_x = MAP_X0 + (MAP_W - range_x * scale) / 2.0f;
     offset_y = MAP_Y0 + (MAP_H - range_y * scale) / 2.0f;
 
-    // 坐标转换宏内联辅助变量
     #define SCR_X(wx) ((uint16)(offset_x + ((wx) - min_x) * scale))
-    #define SCR_Y(wy) ((uint16)(offset_y + MAP_H - ((wy) - min_y) * scale))  // Y 轴翻转
+    #define SCR_Y(wy) ((uint16)(offset_y + MAP_H - ((wy) - min_y) * scale))
 
-    // ─── 构建航迹序列 ───
-    // 去程顺序：起点(S) → 桩1(P) → 桩2(P) → … → 桩N(P) → 调头点(T)
-    // 回程顺序：调头点(T) → 桩N(P) → … → 桩2(P) → 桩1(P) → 起点(S)
-    // 先找出各类点索引
-    int16 start_idx = -1;
-    int16 turn_idx  = -1;
-    int16 cone_indices[S1_MAX_WAYPOINTS];
-    uint8 cone_count = 0;
-
-    for(i = 0; i < s1_waypoint_count; i++)
+    // ─── 去程直线 S → T（始终画） ───
     {
-        switch(s1_waypoints[i].type)
+        uint16 sx = SCR_X(s1_waypoints[s1_start_idx].x);
+        uint16 sy = SCR_Y(s1_waypoints[s1_start_idx].y);
+        uint16 tx = SCR_X(s1_waypoints[s1_turn_idx].x);
+        uint16 ty = SCR_Y(s1_waypoints[s1_turn_idx].y);
+        ips200_draw_line(sx, sy, tx, ty, COLOR_ROUTE_FWD);
+    }
+
+    // ─── 画路线A回程（未选中=暗灰, 选中=绿色亮） ───
+    {
+        uint16 colorA = (s1_route_sel == 0) ? COLOR_ROUTE_A : COLOR_ROUTE_DIM;
+        for(i = 0; i + 1 < s1_routeA_count; i++)
         {
-            case POINT_TYPE_START: start_idx = i; break;
-            case POINT_TYPE_TURN:  turn_idx  = i; break;
-            case POINT_TYPE_CONE:  cone_indices[cone_count++] = i; break;
+            ips200_draw_line(
+                SCR_X(s1_routeA_x[i]),   SCR_Y(s1_routeA_y[i]),
+                SCR_X(s1_routeA_x[i+1]), SCR_Y(s1_routeA_y[i+1]),
+                colorA);
         }
     }
 
-    // ─── 绘制去程路线 ───
-    if(start_idx >= 0)
+    // ─── 画路线B回程（未选中=暗灰, 选中=紫色亮） ───
     {
-        uint16 prev_sx = SCR_X(s1_waypoints[start_idx].x);
-        uint16 prev_sy = SCR_Y(s1_waypoints[start_idx].y);
-
-        // 起点 → 桩1 → 桩2 → … → 桩N
-        for(i = 0; i < cone_count; i++)
+        uint16 colorB = (s1_route_sel == 1) ? COLOR_ROUTE_B : COLOR_ROUTE_DIM;
+        for(i = 0; i + 1 < s1_routeB_count; i++)
         {
-            uint16 sx = SCR_X(s1_waypoints[cone_indices[i]].x);
-            uint16 sy = SCR_Y(s1_waypoints[cone_indices[i]].y);
-            ips200_draw_line(prev_sx, prev_sy, sx, sy, COLOR_ROUTE_FWD);
-            prev_sx = sx;
-            prev_sy = sy;
-        }
-        // 桩N → 调头点
-        if(turn_idx >= 0)
-        {
-            uint16 tx = SCR_X(s1_waypoints[turn_idx].x);
-            uint16 ty = SCR_Y(s1_waypoints[turn_idx].y);
-            ips200_draw_line(prev_sx, prev_sy, tx, ty, COLOR_ROUTE_FWD);
+            ips200_draw_line(
+                SCR_X(s1_routeB_x[i]),   SCR_Y(s1_routeB_y[i]),
+                SCR_X(s1_routeB_x[i+1]), SCR_Y(s1_routeB_y[i+1]),
+                colorB);
         }
     }
 
-    // ─── 绘制回程路线（偏移表示不同路径） ───
-    if(turn_idx >= 0 && start_idx >= 0)
-    {
-        uint16 prev_sx = SCR_X(s1_waypoints[turn_idx].x);
-        uint16 prev_sy = SCR_Y(s1_waypoints[turn_idx].y);
-
-        // 调头点 → 桩N → 桩(N-1) → … → 桩1
-        for(j = (int16)cone_count - 1; j >= 0; j--)
-        {
-            // 回程路线偏移 3 像素，模拟不同路径
-            uint16 sx = SCR_X(s1_waypoints[cone_indices[j]].x) + 3;
-            uint16 sy = SCR_Y(s1_waypoints[cone_indices[j]].y) + 3;
-            ips200_draw_line(prev_sx, prev_sy, sx, sy, COLOR_ROUTE_RET);
-            prev_sx = sx;
-            prev_sy = sy;
-        }
-        // 桩1 → 起点
-        {
-            uint16 sx = SCR_X(s1_waypoints[start_idx].x) + 3;
-            uint16 sy = SCR_Y(s1_waypoints[start_idx].y) + 3;
-            ips200_draw_line(prev_sx, prev_sy, sx, sy, COLOR_ROUTE_RET);
-        }
-    }
-
-    // ─── 绘制各点位标记（覆盖在路线之上） ───
+    // ─── 绘制各点位标记 ───
     for(i = 0; i < s1_waypoint_count; i++)
     {
         uint16 sx = SCR_X(s1_waypoints[i].x);
@@ -422,67 +488,66 @@ static void draw_preview(void)
         switch(s1_waypoints[i].type)
         {
             case POINT_TYPE_START:
-                draw_dot(sx, sy, 4, color);              // 大实心点表示起点
+                draw_dot(sx, sy, 4, color);
                 ips200_set_color(color, COLOR_BG);
                 ips200_show_char(sx + 6, sy - 4, 'S');
                 break;
             case POINT_TYPE_TURN:
-                draw_dot(sx, sy, 4, color);              // 大实心点表示调头点
+                draw_dot(sx, sy, 4, color);
                 ips200_set_color(color, COLOR_BG);
                 ips200_show_char(sx + 6, sy - 4, 'T');
                 break;
             case POINT_TYPE_CONE:
-                draw_circle(sx, sy, 5, color);           // 空心圆表示桩
-                draw_dot(sx, sy, 1, color);              // 中心小点
+                draw_circle(sx, sy, 5, color);
+                draw_dot(sx, sy, 1, color);
                 break;
         }
     }
 
-    // ─── 图例 ───
+    // ─── 图例 + 选中标记 ───
     ips200_set_color(COLOR_ROUTE_FWD, COLOR_BG);
-    ips200_show_string(8,   284, "-- Go");
-    ips200_set_color(COLOR_ROUTE_RET, COLOR_BG);
-    ips200_show_string(80,  284, "-- Ret");
+    ips200_show_string(8, 260, "-- S->T");
 
-    // ─── 底部提示 ───
+    ips200_set_color((s1_route_sel == 0) ? COLOR_ROUTE_A : COLOR_ROUTE_DIM, COLOR_BG);
+    ips200_show_string(8, 278, (s1_route_sel == 0) ? ">A 1st Left" : " A 1st Left");
+
+    ips200_set_color((s1_route_sel == 1) ? COLOR_ROUTE_B : COLOR_ROUTE_DIM, COLOR_BG);
+    ips200_show_string(8, 294, (s1_route_sel == 1) ? ">B 1st Right" : " B 1st Right");
+
+    // ─── 底部按键提示 ───
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
-    ips200_show_string(8, 302, "[LEFT]Go! [SW]Back");
+    ips200_show_string(130, 278, "UP/DN:Switch");
+    ips200_show_string(130, 294, "LEFT:Go SW:Bk");
 
     #undef SCR_X
     #undef SCR_Y
 }
 
 // =========================================================================
-//  RUNNING 页面：行进状态实时显示
+//  RUNNING 页面
 // =========================================================================
 static void draw_running(void)
 {
     ips200_full(COLOR_BG);
-
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(30, 10, "== RUNNING ==");
 
     ips200_set_color(COLOR_TEXT, COLOR_BG);
-    ips200_show_string(8,  40,  "Speed:");
-    ips200_show_float(70,  40,  target_speed, 5, 1);
-
-    ips200_show_string(8,  60,  "X:");
-    ips200_show_float(28,  60,  inav_x, 4, 2);
+    ips200_show_string(8,  40, "Speed:");
+    ips200_show_float(70,  40, target_speed, 5, 1);
+    ips200_show_string(8,  60, "X:");
+    ips200_show_float(28,  60, inav_x, 4, 2);
     ips200_show_string(120, 60, "Y:");
     ips200_show_float(140, 60, inav_y, 4, 2);
-
-    ips200_show_string(8,  80,  "Yaw:");
-    ips200_show_float(48,  80,  quat_yaw_deg, 4, 1);
-
-    ips200_show_string(8,  100, "L_Duty:");
+    ips200_show_string(8,  80, "Yaw:");
+    ips200_show_float(48,  80, quat_yaw_deg, 4, 1);
+    ips200_show_string(8, 100, "L_Duty:");
     ips200_show_int(68, 100, left_motor_duty, 5);
-    ips200_show_string(8,  116, "R_Duty:");
+    ips200_show_string(8, 116, "R_Duty:");
     ips200_show_int(68, 116, right_motor_duty, 5);
+    ips200_show_string(8, 140, "Dist:");
+    ips200_show_float(56, 140, car_distance, 5, 2);
 
-    ips200_show_string(8,  140, "Dist:");
-    ips200_show_float(56,  140, car_distance, 5, 2);
-
-    // 底部提示
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(8, 302, "[SW] Emergency Stop");
 }
@@ -493,15 +558,12 @@ static void draw_running(void)
 static void draw_done(void)
 {
     ips200_full(COLOR_BG);
-
     ips200_set_color(COLOR_START_PT, COLOR_BG);
     ips200_show_string(50, 100, "== FINISHED ==");
     ips200_show_string(30, 140, "Course Complete!");
-
     ips200_set_color(COLOR_TEXT, COLOR_BG);
-    ips200_show_string(8,  180, "Dist:");
-    ips200_show_float(56,  180, car_distance, 5, 2);
-
+    ips200_show_string(8, 180, "Dist:");
+    ips200_show_float(56, 180, car_distance, 5, 2);
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(20, 296, "[SW] Back to Home");
 }
@@ -511,7 +573,7 @@ static void draw_done(void)
 // =========================================================================
 static void switch_state(ui_state_enum new_state)
 {
-    s1_ui_state    = new_state;
+    s1_ui_state     = new_state;
     s1_screen_dirty = 1;
 }
 
@@ -521,9 +583,8 @@ static void reset_collect_data(void)
     s1_has_start      = 0;
     s1_has_turn       = 0;
     s1_cur_point_type = POINT_TYPE_START;
+    s1_route_sel      = 0;
     memset(s1_waypoints, 0, sizeof(s1_waypoints));
-
-    // 惯导清零
     inav_x      = 0.0f;
     inav_y      = 0.0f;
     inav_active = 0;
@@ -533,10 +594,8 @@ static void reset_collect_data(void)
 //  各状态按键处理
 // =========================================================================
 
-// ─── HOME ─────────────────────────────────────────────────
 static void poll_home(void)
 {
-    // UP 进入科目一采集
     if(btn_rising(UP, &btn_up_cnt))
     {
         reset_collect_data();
@@ -544,57 +603,40 @@ static void poll_home(void)
     }
 }
 
-// ─── COLLECT ──────────────────────────────────────────────
 static void poll_collect(void)
 {
-    // DOWN：切换点位类型
     if(btn_rising(DOWN, &btn_down_cnt))
     {
         s1_cur_point_type = (point_type_enum)((s1_cur_point_type + 1) % 3);
         s1_screen_dirty = 1;
     }
 
-    // UP：记录当前点
     if(btn_rising(UP, &btn_up_cnt))
     {
-        if(s1_waypoint_count >= S1_MAX_WAYPOINTS)
-        {
-            // 已满，不操作
-        }
-        else if(s1_cur_point_type == POINT_TYPE_START && s1_has_start)
-        {
-            // 起点已记录，不重复
-        }
-        else if(s1_cur_point_type == POINT_TYPE_TURN && s1_has_turn)
-        {
-            // 调头点已记录，不重复
-        }
+        if(s1_waypoint_count >= S1_MAX_WAYPOINTS) {}
+        else if(s1_cur_point_type == POINT_TYPE_START && s1_has_start) {}
+        else if(s1_cur_point_type == POINT_TYPE_TURN  && s1_has_turn)  {}
         else
         {
-            // 第一个点时锁定惯导起点
             if(s1_waypoint_count == 0)
             {
                 inav_heading_ref = quat_yaw_deg;
-                inav_x           = 0.0f;
-                inav_y           = 0.0f;
-                inav_active      = 1;
+                inav_x = 0.0f;
+                inav_y = 0.0f;
+                inav_active = 1;
             }
-
             waypoint_t *wp = &s1_waypoints[s1_waypoint_count];
             wp->x    = inav_x;
             wp->y    = inav_y;
             wp->type = s1_cur_point_type;
-
             if(s1_cur_point_type == POINT_TYPE_START) s1_has_start = 1;
             if(s1_cur_point_type == POINT_TYPE_TURN)  s1_has_turn  = 1;
-
             s1_waypoint_count++;
             led(toggle);
             s1_screen_dirty = 1;
         }
     }
 
-    // SE：删除上一个点
     if(btn_rising(SE, &btn_se_cnt))
     {
         if(s1_waypoint_count > 0)
@@ -607,18 +649,17 @@ static void poll_collect(void)
         }
     }
 
-    // NE：完成采集 → 预览（需至少有 起点+调头点）
-    if(btn_rising(NE, &btn_ne_cnt))
+    if(btn_rising(LEFT, &btn_left_cnt))
     {
         if(s1_has_start && s1_has_turn && s1_waypoint_count >= 2)
         {
-            inav_active = 0;   // 暂停惯导积分
+            inav_active = 0;
+            s1_route_sel = 0;
+            prepare_routes();
             switch_state(UI_STATE_PREVIEW);
         }
-        // 否则不切换（条件不满足）
     }
 
-    // SW 长按返回首页（20 ticks = 1s）
     if(btn_long_press(SW, &btn_sw_cnt, 20))
     {
         reset_collect_data();
@@ -626,26 +667,66 @@ static void poll_collect(void)
     }
 }
 
-// ─── PREVIEW ──────────────────────────────────────────────
 static void poll_preview(void)
 {
-    // LEFT：发车
+    // UP / DOWN: 切换路线
+    if(btn_rising(UP, &btn_up_cnt))
+    {
+        s1_route_sel = (s1_route_sel == 0) ? 1 : 0;
+        s1_screen_dirty = 1;
+    }
+    if(btn_rising(DOWN, &btn_down_cnt))
+    {
+        s1_route_sel = (s1_route_sel == 0) ? 1 : 0;
+        s1_screen_dirty = 1;
+    }
+
+    // LEFT: 发车（使用选中的路线）
     if(btn_rising(LEFT, &btn_left_cnt))
     {
-        // 重置惯导为起点
-        inav_x      = 0.0f;
-        inav_y      = 0.0f;
-        inav_active = 1;
+        // 构建完整航点序列: 去程(直线) + 回程(绕桩)
+        float  full_x[S1_MAX_WAYPOINTS * 2 + 8];
+        float  full_y[S1_MAX_WAYPOINTS * 2 + 8];
+        uint8  full_count = 0;
+
+        float start_x = s1_waypoints[s1_start_idx].x;
+        float start_y = s1_waypoints[s1_start_idx].y;
+        float turn_x  = s1_waypoints[s1_turn_idx].x;
+        float turn_y  = s1_waypoints[s1_turn_idx].y;
+
+        // 去程: 起点 → 调头点（直线，只需两点）
+        full_x[full_count] = start_x;
+        full_y[full_count] = start_y;
+        full_count++;
+        full_x[full_count] = turn_x;
+        full_y[full_count] = turn_y;
+        full_count++;
+
+        // 回程: 使用选中路线的绕桩航点（跳过第一个点=调头点，因为已在去程末尾）
+        const float *sel_x = (s1_route_sel == 0) ? s1_routeA_x : s1_routeB_x;
+        const float *sel_y = (s1_route_sel == 0) ? s1_routeA_y : s1_routeB_y;
+        uint8 sel_count     = (s1_route_sel == 0) ? s1_routeA_count : s1_routeB_count;
+        uint8 k;
+        for(k = 1; k < sel_count; k++)  // 从1开始跳过调头点
+        {
+            full_x[full_count] = sel_x[k];
+            full_y[full_count] = sel_y[k];
+            full_count++;
+        }
+
+        // 重置惯导
+        inav_x           = 0.0f;
+        inav_y           = 0.0f;
+        inav_active      = 1;
         inav_heading_ref = quat_yaw_deg;
 
-        // 启动车辆
-        run_state    = 1;
-        target_speed = 0.0f;
+        // 注入 ins_tracker 并启动
+        run_state = 1;
+        ins_tracker_start_with_points(full_x, full_y, full_count);
 
         switch_state(UI_STATE_RUNNING);
     }
 
-    // SW 长按返回首页
     if(btn_long_press(SW, &btn_sw_cnt, 20))
     {
         reset_collect_data();
@@ -653,21 +734,28 @@ static void poll_preview(void)
     }
 }
 
-// ─── RUNNING ──────────────────────────────────────────────
 static void poll_running(void)
 {
-    // 行进中只做紧急停车和定期刷新
-    // SW 长按紧急停车
-    if(btn_long_press(SW, &btn_sw_cnt, 10))  // 0.5s 紧急停
+    if(tracker_state == TRACKER_STATE_DONE)
     {
-        run_state    = 0;
-        target_speed = 0.0f;
+        run_state     = 0;
+        target_speed  = 0.0f;
         turn_diff_ext = 0;
-        inav_active  = 0;
+        inav_active   = 0;
+        switch_state(UI_STATE_DONE);
+        return;
+    }
+
+    if(btn_long_press(SW, &btn_sw_cnt, 10))
+    {
+        run_state     = 0;
+        target_speed  = 0.0f;
+        turn_diff_ext = 0;
+        inav_active   = 0;
+        tracker_state = TRACKER_STATE_DONE;
         switch_state(UI_STATE_DONE);
     }
 
-    // 定期刷新显示（每 500ms = 10 次 poll）
     run_display_cnt++;
     if(run_display_cnt >= 10)
     {
@@ -676,10 +764,8 @@ static void poll_running(void)
     }
 }
 
-// ─── DONE ─────────────────────────────────────────────────
 static void poll_done(void)
 {
-    // SW 返回首页
     if(btn_rising(SW, &btn_sw_cnt))
     {
         reset_collect_data();
@@ -690,27 +776,21 @@ static void poll_done(void)
 // =========================================================================
 //  公开接口
 // =========================================================================
-
 void subject1_ui_init(void)
 {
-    // 初始化屏幕
     ips200_set_dir(IPS200_PORTAIT);
     ips200_set_color(COLOR_TEXT, COLOR_BG);
     ips200_init(IPS200_TYPE);
     ips200_set_font(IPS200_8X16_FONT);
 
-    // 重置状态
     s1_ui_state     = UI_STATE_HOME;
     s1_screen_dirty = 1;
     reset_collect_data();
-
-    // 画首页
     draw_home();
 }
 
 void subject1_ui_poll(void)
 {
-    // ─── 处理按键 ────────────────
     switch(s1_ui_state)
     {
         case UI_STATE_HOME:    poll_home();    break;
@@ -720,11 +800,9 @@ void subject1_ui_poll(void)
         case UI_STATE_DONE:    poll_done();    break;
     }
 
-    // ─── 按需重绘屏幕 ───────────
     if(s1_screen_dirty)
     {
         s1_screen_dirty = 0;
-
         switch(s1_ui_state)
         {
             case UI_STATE_HOME:    draw_home();    break;

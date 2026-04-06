@@ -125,6 +125,34 @@ void ins_tracker_init(void)
 }
 
 //=============================================================================
+// 外部注入航点并启动循迹（由 UI 发车时调用）
+// px, py: 按行驶顺序排列的航点坐标数组
+// count:  航点总数（index 0 = 起点）
+// 调用前需确保 inav_x/y 已清零、inav_active 已开启、inav_heading_ref 已设定
+//=============================================================================
+void ins_tracker_start_with_points(const float *px, const float *py, uint8 count)
+{
+    uint8 i;
+    if(count < 2 || count > INAV_TRACKER_MAX_POINTS) return;
+
+    // 将外部航点拷贝到内部存储
+    for(i = 0; i < count; i++)
+    {
+        recorded_x[i] = px[i];
+        recorded_y[i] = py[i];
+    }
+
+    tracker_point_count = count;
+    current_target_idx  = 1;            // 第一个目标是 index 1（跳过起点自身）
+    initial_heading_deg = inav_heading_ref;
+    tracker_state       = TRACKER_STATE_RUNNING;
+    target_speed        = INAV_TRACKER_MIN_SPEED;
+
+    wireless_printf("[INAV] ExtStart: %d pts, heading_ref=%.1f\r\n",
+                    count, initial_heading_deg);
+}
+
+//=============================================================================
 // 主循环轮询按键（每 50ms 调用一次）
 //=============================================================================
 void ins_tracker_button_poll(void)

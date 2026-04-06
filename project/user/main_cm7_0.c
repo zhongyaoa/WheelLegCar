@@ -59,21 +59,27 @@ int main(void)
     led_init();                         // LED 初始化
     led(off);
     ins_tracker_init();                 // 惯性导航循迹模块初始化
-    wireless_printf("\r\n inav_tracker_init ok.\r\n");
-    wireless_printf("[UP]=记录点位（第1次锁定起点+航向）  [LEFT]=开始循迹\r\n");
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
+    subject1_ui_init();                 // 科目一 UI 初始化（含屏幕初始化）       
+    wireless_printf("\r\n UI init ok. [UP]=Enter Subject 1\r\n");
 
     uint32 btn_poll_tick = 0;
     while(true)
     {
-        // 每 50ms 轮询一次按键与循迹更新
+        // 每 50ms 轮询一次 UI 按键与循迹更新
         btn_poll_tick++;
         if(btn_poll_tick >= 5)
         {
             btn_poll_tick = 0;
-            ins_tracker_button_poll();
-            ins_tracker_update();
+            // UI 轮询（处理按键 + 屏幕刷新）                                     
+            subject1_ui_poll();                                                   
+                                                                                  
+            // 当 UI 在行进状态时，同步调用循迹更新                               
+            if(s1_ui_state == UI_STATE_RUNNING)                                   
+            {                                                                     
+                ins_tracker_update();                                             
+            }
         }
 
         system_delay_ms(10);
