@@ -235,11 +235,11 @@ void pit_call_back(void)
     imu_yaw_deg = quat_yaw_deg;
 
     // 惯性导航：每 1ms 用编码器速度 + 四元数航向积分推算位置
-    // car_speed = (left_spd - right_spd)/2，前进时左轮转速为负、右轮为正，故 car_speed < 0 表示前进
-    // 取反使 v_mps > 0 对应前进方向
+    // car_speed = (right_spd - left_spd)/2，前进时左轮转速为负、右轮为正，故 car_speed > 0 表示前进
+    // v_mps > 0 对应前进方向
     if(inav_active)
     {
-        float v_mps = -(float)car_speed / 60.0f * (WHEEL_CIRCUMFERENCE * 0.01f);  // cm→m，取反使前进为正
+        float v_mps = (float)car_speed / 60.0f * (WHEEL_CIRCUMFERENCE * 0.01f);  // cm→m，取反使前进为正
         // 当前航向相对参考航向的偏差（rad）
         float heading_rad = (quat_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
         // Y 轴 = 参考航向方向（前进），X 轴 = 参考航向右侧 90°
