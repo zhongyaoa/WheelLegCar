@@ -47,19 +47,36 @@ int main(void)
 {
     clock_init(SYSTEM_CLOCK_250M);      // 时钟配置及系统初始化<务必保留>
     debug_init();                       // 调试串口信息初始化
+    wireless_uart_init();
+    
+
+    balance_cascade_init();             // 串级平衡控制初始化
+    small_driver_uart_init();           // 小车控制串口初始化
+    imu660ra_init();
+    steer_control_init();               // 舵机控制初始化
+
     button_init();                      // 按键初始化
     led_init();                         // LED 初始化
     led(off);
-    
+    ins_tracker_init();                 // 惯性导航循迹模块初始化
+    wireless_printf("\r\n inav_tracker_init ok.\r\n");
+    wireless_printf("[UP]=记录点位（第1次锁定起点+航向）  [LEFT]=开始循迹\r\n");
 
+    pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
+
+    uint32 btn_poll_tick = 0;
     while(true)
     {
-        //if (button_press(UP) || button_press(SE)|| button_press(SW)|| button_press(LEFT)|| button_press(DOWN))
-        if (button_press(UP) || button_press(NE))
-            {
-                led(toggle);
-            }
-            system_delay_ms(100);
+        // 每 50ms 轮询一次按键与循迹更新
+        btn_poll_tick++;
+        if(btn_poll_tick >= 5)
+        {
+            btn_poll_tick = 0;
+            ins_tracker_button_poll();
+            ins_tracker_update();
+        }
+
+        system_delay_ms(10);
     }
         
         

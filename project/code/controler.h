@@ -22,7 +22,6 @@
 #define BUTTON_UP                       (P10_4)
 #define BUTTON_DOWN                     (P10_3)
 #define BUTTON_LEFT                     (P10_2)
-#define BUTTON_NE                       (P09_1)
 #define BUTTON_SE                       (P09_0)
 #define BUTTON_SW                       (P08_3)      
 
@@ -32,9 +31,8 @@ typedef enum {
     UP = 0,
     DOWN,
     LEFT,
-    NE,
-    SE,
-    SW
+    SE, //东南
+    SW  //西南
 } Button;
 
 typedef enum {
