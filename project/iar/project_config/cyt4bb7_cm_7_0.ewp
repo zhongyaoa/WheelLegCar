@@ -1152,6 +1152,12 @@
             <name>$PROJ_DIR$\..\..\code\steer_control.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\subject1_ui.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\subject1_ui.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
         </file>
     </group>
