@@ -11,6 +11,14 @@ uint8              tracker_point_count = 0;
 static float recorded_x[INAV_TRACKER_MAX_POINTS];
 static float recorded_y[INAV_TRACKER_MAX_POINTS];
 
+// 初始航向锁定滤波
+static uint8 heading_lock_count = 0;
+static float heading_lock_sum = 0.0f;
+
+// 初始航向锁定滤波
+//static uint8 heading_lock_count = 0;
+//static float heading_lock_sum = 0.0f;
+
 // 记录第一个点时锁定的初始航向角（°），后续回到此航向=0误差
 static float initial_heading_deg = 0.0f;
 
@@ -118,6 +126,8 @@ void ins_tracker_init(void)
     btn_up_hold           = 0;
     btn_left_hold         = 0;
     initial_heading_deg   = 0.0f;
+    heading_lock_count    = 0;
+    heading_lock_sum      = 0.0f;
     inav_active           = 0;
     inav_x                = 0.0f;
     inav_y                = 0.0f;
@@ -148,8 +158,8 @@ void ins_tracker_start_with_points(const float *px, const float *py, uint8 count
     tracker_state       = TRACKER_STATE_RUNNING;
     target_speed        = INAV_TRACKER_MIN_SPEED;
 
-    wireless_printf("[INAV] ExtStart: %d pts, heading_ref=%.1f\r\n",
-                    count, initial_heading_deg);
+    //wireless_printf("[INAV] ExtStart: %d pts, heading_ref=%.1f\r\n",
+    //                count, initial_heading_deg);
 }
 
 //=============================================================================
@@ -168,8 +178,18 @@ void ins_tracker_button_poll(void)
             {
                 if(tracker_point_count == 0)
                 {
-                    // 第一个点：锁定初始航向，坐标系清零
-                    initial_heading_deg    = quat_yaw_deg;
+                    heading_lock_sum += quat_yaw_deg;
+                    heading_lock_count++;
+
+                    if(heading_lock_count < INAV_LOCK_HEADING_SAMPLES)
+                    {
+                        //wireless_printf("[INAV] Lock heading... %d/%d yaw=%.1f\r\n",
+                         //               heading_lock_count, INAV_LOCK_HEADING_SAMPLES, quat_yaw_deg);
+                        return;
+                    }
+
+                    // 第一个点：平均锁定初始航向，坐标系清零
+                    initial_heading_deg    = heading_lock_sum / (float)INAV_LOCK_HEADING_SAMPLES;
                     inav_heading_ref       = initial_heading_deg;
                     inav_x                 = 0.0f;
                     inav_y                 = 0.0f;
@@ -178,9 +198,11 @@ void ins_tracker_button_poll(void)
                     recorded_x[0]          = 0.0f;
                     recorded_y[0]          = 0.0f;
                     tracker_point_count    = 1;
+                    heading_lock_count     = 0;
+                    heading_lock_sum       = 0.0f;
                     led(toggle);
-                    wireless_printf("[INAV] Point 0 (origin) locked. heading_ref=%.1f deg\r\n",
-                                    initial_heading_deg);
+                    //wireless_printf("[INAV] Point 0 (origin) locked. heading_ref=%.1f deg\r\n",
+                     //               initial_heading_deg);
                 }
                 else
                 {
@@ -189,21 +211,23 @@ void ins_tracker_button_poll(void)
                     recorded_y[tracker_point_count] = inav_y;
                     tracker_point_count++;
                     led(toggle);
-                    wireless_printf("[INAV] Point %d recorded: x=%.2f y=%.2f\r\n",
-                                    tracker_point_count - 1,
-                                    recorded_x[tracker_point_count - 1],
-                                    recorded_y[tracker_point_count - 1]);
+                    //wireless_printf("[INAV] Point %d recorded: x=%.2f y=%.2f\r\n",
+                     //               tracker_point_count - 1,
+                       //             recorded_x[tracker_point_count - 1],
+                 //                   recorded_y[tracker_point_count - 1]);
                 }
             }
             else if(tracker_point_count >= INAV_TRACKER_MAX_POINTS)
             {
-                wireless_printf("[INAV] Max points (%d) reached.\r\n", INAV_TRACKER_MAX_POINTS);
+                //wireless_printf("[INAV] Max points (%d) reached.\r\n", INAV_TRACKER_MAX_POINTS);
             }
         }
     }
     else
     {
         btn_up_hold = 0;
+        heading_lock_count = 0;
+        heading_lock_sum = 0.0f;
     }
 
     // ---- button_left：开始循迹 ----
@@ -228,12 +252,12 @@ void ins_tracker_button_poll(void)
                 tracker_state      = TRACKER_STATE_RUNNING;
                 target_speed       = INAV_TRACKER_MIN_SPEED;
 
-                wireless_printf("[INAV] Start tracking. Points=%d heading_ref=%.1f\r\n",
-                                tracker_point_count, initial_heading_deg);
+                //wireless_printf("[INAV] Start tracking. Points=%d heading_ref=%.1f\r\n",
+                  //              tracker_point_count, initial_heading_deg);
             }
             else if(tracker_point_count < 2)
             {
-                wireless_printf("[INAV] Need at least 2 points (origin + 1).\r\n");
+                //wireless_printf("[INAV] Need at least 2 points (origin + 1).\r\n");
             }
         }
     }
@@ -244,7 +268,7 @@ void ins_tracker_button_poll(void)
 }
 
 //=============================================================================
-// 循迹更新（在主循环中每 50ms 调用一次）
+// 循迹更新（在主循环中建议每 10~20ms 调用一次）
 //=============================================================================
 void ins_tracker_update(void)
 {
@@ -268,7 +292,7 @@ void ins_tracker_update(void)
         turn_diff_ext = 0;
         inav_active   = 0;
         led(on);
-        wireless_printf("[INAV] All points done.\r\n");
+        //wireless_printf("[INAV] All points done.\r\n");
         return;
     }
 
@@ -280,7 +304,7 @@ void ins_tracker_update(void)
     // 到达判定
     if(dist < INAV_TRACKER_ARRIVE_DIST)
     {
-        wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
+        //wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
 
         current_target_idx++;
 
@@ -292,7 +316,7 @@ void ins_tracker_update(void)
             turn_diff_ext = 0;
             inav_active   = 0;
             led(on);
-            wireless_printf("[INAV] All points done.\r\n");
+            //wireless_printf("[INAV] All points done.\r\n");
             return;
         }
 
@@ -319,7 +343,7 @@ void ins_tracker_update(void)
     int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
     turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
 
-    wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
-                    current_target_idx, dist, bearing_local, current_heading_rel,
-                    heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
+    //wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
+     //               current_target_idx, dist, bearing_local, current_heading_rel,
+       //             heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
 }

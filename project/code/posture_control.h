@@ -13,7 +13,12 @@
 //#include "balance_control.h"
 //#include "steer_control.h"
 //#include "small_driver_uart_control.h"
-#define WHEEL_CIRCUMFERENCE 6.4f // 假设轮子直径为6.4cm
+//#define WHEEL_CIRCUMFERENCE_CM 20.1f     // 轮子周长(cm)，直径约 6.4cm
+#define WHEEL_DIAMETER 6.4f //cm
+#define INAV_SPEED_FILTER_ALPHA 0.2f      // 惯导速度低通滤波系数
+#define INAV_STATIONARY_SPEED_RPM 30      // 低于该转速认为接近静止
+#define INAV_LOCK_HEADING_SAMPLES 20      // 锁定初始航向时的平均采样数
+
 
 // 车体运行状态变量
 extern uint32 sys_times;

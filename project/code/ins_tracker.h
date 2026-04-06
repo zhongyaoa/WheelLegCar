@@ -30,10 +30,10 @@ typedef enum
 extern tracker_state_enum tracker_state;
 extern uint8 tracker_point_count;
 
-// 在主循环中轮询按键（建议每 50ms 调用一次）
+// 在主循环中轮询按键（建议每 10~20ms 调用一次）
 void ins_tracker_button_poll(void);
 
-// 在主循环中周期调用以更新循迹逻辑（每 50ms 与按键轮询同频即可）
+// 在主循环中周期调用以更新循迹逻辑（建议每 10~20ms 调用一次）
 void ins_tracker_update(void);
 
 // 初始化循迹模块

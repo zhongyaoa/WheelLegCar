@@ -31,7 +31,7 @@ float quat_yaw_rate_dps = 0.0f;
 float inav_x           = 0.0f;
 float inav_y           = 0.0f;
 uint8 inav_active      = 0;      // 1=积分开启，0=暂停
-float inav_heading_ref = 0.0f;   // 坐标系参考航向（°），X 轴正方向对应此航向
+float inav_heading_ref = 0.0f;   // 坐标系参考航向（°），Y 轴正方向对应此航向
 
 int16 left_motor_duty = 0;
 int16 right_motor_duty = 0;
@@ -209,6 +209,7 @@ void pit_call_back(void)
 {
     static uint8 yaw_init = 0;
     static float last_quat_yaw_deg = 0.0f;
+    static float inav_speed_mps_filtered = 0.0f;
 
     sys_times ++;                                      // 系统计时自增
 
@@ -237,15 +238,29 @@ void pit_call_back(void)
 
     // 惯性导航：每 1ms 用编码器速度 + 四元数航向积分推算位置
     // car_speed = (right_spd - left_spd)/2，前进时左轮转速为负、右轮为正，故 car_speed > 0 表示前进
-    // v_mps > 0 对应前进方向
+    // 对速度做低通滤波，并在低速时冻结积分，降低静止抖动导致的虚假位移
     if(inav_active)
     {
-        float v_mps = (float)car_speed / 60.0f * (WHEEL_CIRCUMFERENCE * 0.01f);  // cm→m，取反使前进为正
-        // 当前航向相对参考航向的偏差（rad）
-        float heading_rad = (quat_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
-        // Y 轴 = 参考航向方向（前进），X 轴 = 参考航向右侧 90°
-        inav_y += v_mps * cosf(heading_rad) * 0.001f;  // dt = 1ms
-        inav_x += v_mps * sinf(heading_rad) * 0.001f;
+        float v_mps_raw = (float)car_speed / 60.0f * (WHEEL_DIAMETER * 0.01f);
+
+        inav_speed_mps_filtered += (v_mps_raw - inav_speed_mps_filtered) * INAV_SPEED_FILTER_ALPHA;
+
+        if(func_abs(car_speed) < INAV_STATIONARY_SPEED_RPM)
+        {
+            inav_speed_mps_filtered = 0.0f;
+        }
+        else
+        {
+            // 当前航向相对参考航向的偏差（rad）
+            float heading_rad = (quat_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
+            // Y 轴 = 参考航向方向（前进），X 轴 = 参考航向右侧 90°
+            inav_y += inav_speed_mps_filtered * cosf(heading_rad) * 0.001f;  // dt = 1ms
+            inav_x += inav_speed_mps_filtered * sinf(heading_rad) * 0.001f;
+        }
+    }
+    else
+    {
+        inav_speed_mps_filtered = 0.0f;
     }
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
@@ -282,7 +297,7 @@ void car_motor_control(void)
 {
     static uint8 motor_stopped = 0;  // 标记是否已发送过停止指令
 
-    car_distance += ((float)car_speed / 60.0f * WHEEL_CIRCUMFERENCE * PI * 0.001f);
+    car_distance += ((float)car_speed / 60.0f *  WHEEL_DIAMETER * 0.001f * PI);
 
     if(run_state)                                      // 当运行状态为 1 时，计算电机占空比
     {
