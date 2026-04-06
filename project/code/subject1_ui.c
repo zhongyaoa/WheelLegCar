@@ -50,6 +50,9 @@
 // ===================== 绕桩偏移距离 (m) =====================
 #define CONE_BYPASS_DIST   0.35f   // 绕桩时偏离桩位的横向距离
 
+// ===================== 超程距离 (m) =====================
+#define OVERMEASURE        0.1f    // 回到起点后继续前进的距离，确保越过终点线
+
 // ===================== 全局状态 =====================
 ui_state_enum  s1_ui_state        = UI_STATE_HOME;
 waypoint_t     s1_waypoints[S1_MAX_WAYPOINTS];
@@ -70,6 +73,9 @@ static uint32 btn_down_cnt = 0;
 static uint32 btn_left_cnt = 0;
 static uint32 btn_se_cnt   = 0;
 static uint32 btn_sw_cnt   = 0;
+
+// 采集阶段记录的初始航向（°），发车时用它做坐标系参考而非当前车头朝向
+static float s1_collect_heading_ref = 0.0f;
 
 // 行进中刷新降频
 static uint32 run_display_cnt = 0;
@@ -517,10 +523,36 @@ static void draw_preview(void)
     // ─── 底部按键提示 ───
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(130, 278, "UP/DN:Switch");
-    ips200_show_string(130, 294, "LEFT:Go SW:Bk");
+    ips200_show_string(130, 294, "L:Rdy SW:Bk");
 
     #undef SCR_X
     #undef SCR_Y
+}
+
+// =========================================================================
+//  STANDBY 页面 —— 预备阶段，车辆维持平衡等待发车
+// =========================================================================
+static void draw_standby(void)
+{
+    ips200_full(COLOR_BG);
+    ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
+    ips200_show_string(30, 10, "== STANDBY ==");
+
+    ips200_set_color(COLOR_TEXT, COLOR_BG);
+    ips200_show_string(20, 60, "Balancing...");
+    ips200_show_string(20, 90, "Place car on ground");
+    ips200_show_string(20, 110, "then press [LEFT]");
+
+    ips200_show_string(8,  150, "Roll:");
+    ips200_show_float(56,  150, roll_balance_cascade.posture_value.rol, 4, 1);
+    ips200_show_string(8,  170, "Pitch:");
+    ips200_show_float(56,  170, roll_balance_cascade.posture_value.pit, 4, 1);
+    ips200_show_string(8,  190, "State:");
+    ips200_show_string(56, 190, run_state ? "BAL" : "WAIT");
+
+    ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
+    ips200_show_string(8, 280, "[LEFT] Launch!");
+    ips200_show_string(8, 296, "[SW] Cancel");
 }
 
 // =========================================================================
@@ -584,6 +616,7 @@ static void reset_collect_data(void)
     s1_has_turn       = 0;
     s1_cur_point_type = POINT_TYPE_START;
     s1_route_sel      = 0;
+    s1_collect_heading_ref = 0.0f;
     memset(s1_waypoints, 0, sizeof(s1_waypoints));
     inav_x      = 0.0f;
     inav_y      = 0.0f;
@@ -621,6 +654,7 @@ static void poll_collect(void)
             if(s1_waypoint_count == 0)
             {
                 inav_heading_ref = quat_yaw_deg;
+                s1_collect_heading_ref = quat_yaw_deg;  // 保存采集时的航向
                 inav_x = 0.0f;
                 inav_y = 0.0f;
                 inav_active = 1;
@@ -681,7 +715,32 @@ static void poll_preview(void)
         s1_screen_dirty = 1;
     }
 
-    // LEFT: 发车（使用选中的路线）
+    // LEFT: 进入预备阶段（开始维持平衡）
+    if(btn_rising(LEFT, &btn_left_cnt))
+    {
+        // 启用平衡，小车开始自主站立
+        balance_enable = 1;
+        switch_state(UI_STATE_STANDBY);
+    }
+
+    if(btn_long_press(SW, &btn_sw_cnt, 20))
+    {
+        reset_collect_data();
+        switch_state(UI_STATE_HOME);
+    }
+}
+
+static void poll_standby(void)
+{
+    // 预备阶段持续刷新姿态显示
+    run_display_cnt++;
+    if(run_display_cnt >= 10)
+    {
+        run_display_cnt = 0;
+        s1_screen_dirty = 1;
+    }
+
+    // LEFT: 发车
     if(btn_rising(LEFT, &btn_left_cnt))
     {
         // 构建完整航点序列: 去程(直线) + 回程(绕桩)
@@ -707,18 +766,36 @@ static void poll_preview(void)
         const float *sel_y = (s1_route_sel == 0) ? s1_routeA_y : s1_routeB_y;
         uint8 sel_count     = (s1_route_sel == 0) ? s1_routeA_count : s1_routeB_count;
         uint8 k;
-        for(k = 1; k < sel_count; k++)  // 从1开始跳过调头点
+        for(k = 1; k < sel_count; k++)
         {
             full_x[full_count] = sel_x[k];
             full_y[full_count] = sel_y[k];
             full_count++;
         }
 
+        // 超程点: 沿最后一段行进方向再延伸 OVERMEASURE 米，确保越过终点线
+        if(full_count >= 2)
+        {
+            float prev_x = full_x[full_count - 2];
+            float prev_y = full_y[full_count - 2];
+            float last_x = full_x[full_count - 1];
+            float last_y = full_y[full_count - 1];
+            float dx = last_x - prev_x;
+            float dy = last_y - prev_y;
+            float len = sqrtf(dx * dx + dy * dy);
+            if(len > 0.001f)
+            {
+                full_x[full_count] = last_x + (dx / len) * OVERMEASURE;
+                full_y[full_count] = last_y + (dy / len) * OVERMEASURE;
+                full_count++;
+            }
+        }
+
         // 重置惯导
         inav_x           = 0.0f;
         inav_y           = 0.0f;
         inav_active      = 1;
-        inav_heading_ref = quat_yaw_deg;
+        inav_heading_ref = s1_collect_heading_ref;  // 使用采集时的航向，而非当前车头朝向
 
         // 注入 ins_tracker 并启动
         run_state = 1;
@@ -727,10 +804,12 @@ static void poll_preview(void)
         switch_state(UI_STATE_RUNNING);
     }
 
+    // SW 长按: 取消预备，停止平衡
     if(btn_long_press(SW, &btn_sw_cnt, 20))
     {
-        reset_collect_data();
-        switch_state(UI_STATE_HOME);
+        run_state      = 0;
+        balance_enable = 0;
+        switch_state(UI_STATE_PREVIEW);
     }
 }
 
@@ -738,10 +817,11 @@ static void poll_running(void)
 {
     if(tracker_state == TRACKER_STATE_DONE)
     {
-        run_state     = 0;
         target_speed  = 0.0f;
         turn_diff_ext = 0;
         inav_active   = 0;
+        // balance_enable 保持为 1，car_state_calculate() 会自动恢复 run_state
+        // 使小车完成后依然保持平衡
         switch_state(UI_STATE_DONE);
         return;
     }
@@ -749,6 +829,7 @@ static void poll_running(void)
     if(btn_long_press(SW, &btn_sw_cnt, 10))
     {
         run_state     = 0;
+        balance_enable = 0;
         target_speed  = 0.0f;
         turn_diff_ext = 0;
         inav_active   = 0;
@@ -768,6 +849,8 @@ static void poll_done(void)
 {
     if(btn_rising(SW, &btn_sw_cnt))
     {
+        run_state      = 0;
+        balance_enable = 0;
         reset_collect_data();
         switch_state(UI_STATE_HOME);
     }
@@ -796,6 +879,7 @@ void subject1_ui_poll(void)
         case UI_STATE_HOME:    poll_home();    break;
         case UI_STATE_COLLECT: poll_collect(); break;
         case UI_STATE_PREVIEW: poll_preview(); break;
+        case UI_STATE_STANDBY: poll_standby(); break;
         case UI_STATE_RUNNING: poll_running(); break;
         case UI_STATE_DONE:    poll_done();    break;
     }
@@ -808,6 +892,7 @@ void subject1_ui_poll(void)
             case UI_STATE_HOME:    draw_home();    break;
             case UI_STATE_COLLECT: draw_collect(); break;
             case UI_STATE_PREVIEW: draw_preview(); break;
+            case UI_STATE_STANDBY: draw_standby(); break;
             case UI_STATE_RUNNING: draw_running(); break;
             case UI_STATE_DONE:    draw_done();    break;
         }

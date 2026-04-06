@@ -258,21 +258,22 @@ void ins_tracker_update(void)
     float cur_y = inav_y;
 
     // 确定当前目标坐标
-    // current_target_idx 范围：1 … tracker_point_count-1，之后回起点(0,0)
-    float target_x, target_y;
-    uint8 going_home = 0;
-    if(current_target_idx < tracker_point_count)
+    // current_target_idx 范围：1 … tracker_point_count-1
+    // 所有航点（包括回起点和超程点）已由 UI 层注入，tracker 只需顺序访问
+    if(current_target_idx >= tracker_point_count)
     {
-        target_x = recorded_x[current_target_idx];
-        target_y = recorded_y[current_target_idx];
+        // 所有航点均已到达，循迹完成
+        tracker_state = TRACKER_STATE_DONE;
+        target_speed  = 0.0f;
+        turn_diff_ext = 0;
+        inav_active   = 0;
+        led(on);
+        wireless_printf("[INAV] All points done.\r\n");
+        return;
     }
-    else
-    {
-        // 所有中间点已到达，目标为起点
-        target_x   = 0.0f;
-        target_y   = 0.0f;
-        going_home = 1;
-    }
+
+    float target_x = recorded_x[current_target_idx];
+    float target_y = recorded_y[current_target_idx];
 
     float dist = point_distance(cur_x, cur_y, target_x, target_y);
 
@@ -281,32 +282,23 @@ void ins_tracker_update(void)
     {
         wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
 
-        if(going_home)
+        current_target_idx++;
+
+        // 检查是否所有航点均已到达
+        if(current_target_idx >= tracker_point_count)
         {
-            // 回到起点，循迹完成
             tracker_state = TRACKER_STATE_DONE;
             target_speed  = 0.0f;
             turn_diff_ext = 0;
             inav_active   = 0;
             led(on);
-            wireless_printf("[INAV] All points done. Back at origin.\r\n");
+            wireless_printf("[INAV] All points done.\r\n");
             return;
         }
 
-        current_target_idx++;
-
         // 更新目标
-        if(current_target_idx < tracker_point_count)
-        {
-            target_x = recorded_x[current_target_idx];
-            target_y = recorded_y[current_target_idx];
-        }
-        else
-        {
-            target_x   = 0.0f;
-            target_y   = 0.0f;
-            going_home = 1;
-        }
+        target_x = recorded_x[current_target_idx];
+        target_y = recorded_y[current_target_idx];
         dist = point_distance(cur_x, cur_y, target_x, target_y);
     }
 

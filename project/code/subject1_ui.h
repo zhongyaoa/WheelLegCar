@@ -2,8 +2,8 @@
     科目一 UI 模块 —— 绕桩前进
     ─────────────────────────────────────────────────────────
     状态机流程：
-        HOME  →（UP 进入采集）→  COLLECT  →（NE 完成采集）→  PREVIEW
-        PREVIEW →（LEFT 发车）→  RUNNING  →（到达终点）→  DONE
+        HOME  →（UP 进入采集）→  COLLECT  →（LEFT 完成采集）→  PREVIEW
+        PREVIEW →（LEFT 预备）→  STANDBY  →（LEFT 发车）→  RUNNING  →（到达终点）→  DONE
         任意状态 →（SW 长按 1s）→  HOME
 
     采集阶段按键：
@@ -44,8 +44,9 @@ typedef enum
     UI_STATE_HOME      = 0,   // 首页
     UI_STATE_COLLECT   = 1,   // 采集点位
     UI_STATE_PREVIEW   = 2,   // 路线预览
-    UI_STATE_RUNNING   = 3,   // 行进中
-    UI_STATE_DONE      = 4,   // 完成
+    UI_STATE_STANDBY   = 3,   // 预备（维持平衡，等待发车）
+    UI_STATE_RUNNING   = 4,   // 行进中
+    UI_STATE_DONE      = 5,   // 完成
 } ui_state_enum;
 
 // ─── 最大点位数 ──────────────────────────────────────────

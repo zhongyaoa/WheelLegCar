@@ -5,6 +5,7 @@ uint32 sys_times = 0;
 uint8 system_time_state[20] = {0};
 
 uint8 run_state = 0;
+uint8 balance_enable = 0;  // 平衡使能标志：0=开机不自动平衡，1=允许自动平衡
 uint8 jump_flag = 0;
 uint32 jump_time = 0;
 
@@ -63,7 +64,7 @@ void car_state_calculate(void)
     }
     else
     {
-        if(run_state == 0)
+        if(run_state == 0 && balance_enable)
         {
             sys_times = 0;
             run_state = 1;
@@ -279,10 +280,13 @@ void pit_call_back(void)
 //=============================================================================
 void car_motor_control(void)
 {
+    static uint8 motor_stopped = 0;  // 标记是否已发送过停止指令
+
     car_distance += ((float)car_speed / 60.0f * WHEEL_CIRCUMFERENCE * PI * 0.001f);
 
     if(run_state)                                      // 当运行状态为 1 时，计算电机占空比
     {
+        motor_stopped = 0;                            // 运行中，清除停止标记
         left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 左电机占空比: 取角速度环输出，限幅
         right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 右电机占空比: 取角速度环输出，限幅
 
@@ -290,12 +294,18 @@ void car_motor_control(void)
         int16 td = func_limit_ab(turn_diff_ext, -turn_duty_max, turn_duty_max);
         left_motor_duty  = func_limit_ab(left_motor_duty  + td, -balance_duty_max, balance_duty_max);
         right_motor_duty = func_limit_ab(right_motor_duty - td, -balance_duty_max, balance_duty_max);
+
+        small_driver_set_duty(-left_motor_duty, right_motor_duty);  // 设置驱动的电机占空比（左电机取反）
     }
     else                                               // 当运行状态为 0 时，电机关闭
     {
         left_motor_duty  = 0;                         // 左电机占空比设为 0
         right_motor_duty = 0;                         // 右电机占空比设为 0
-    }
 
-    small_driver_set_duty(-left_motor_duty, right_motor_duty);  // 设置驱动的电机占空比（左电机取反:小车往前走时,左电机占空比为负,右电机为正）
+        if(!motor_stopped)                            // 仅发送一次停止指令，之后不再发送，让轮子自由滑行
+        {
+            small_driver_set_duty(0, 0);
+            motor_stopped = 1;
+        }
+    }
 }

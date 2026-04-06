@@ -20,6 +20,7 @@ extern uint32 sys_times;
 extern uint8 system_time_state[20];
 
 extern uint8 run_state;
+extern uint8 balance_enable;  // 平衡使能：0=不自动平衡，1=允许平衡
 extern uint8 jump_flag;
 extern uint32 jump_time;
 

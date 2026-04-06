@@ -147,11 +147,13 @@ void my_wireless_optimizer(uint8 data)
         }
         else if('a' == data)
         {
+            balance_enable = true;
             run_state = true; // 启动控制
         }
         else if('d' == data)
         {
             run_state = false; // 停止控制
+            balance_enable = false;
         }
         else if('j' == data)
         {
