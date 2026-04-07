@@ -1,6 +1,7 @@
 #include "ins_tracker.h"
 #include "posture_control.h"
 #include "controler.h"
+#include "gps_fusion.h"
 #include "math.h"
 
 // ===== 状态 =====
@@ -307,6 +308,9 @@ void ins_tracker_update(void)
         //wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
 
         current_target_idx++;
+
+        // 到达路径点时用 GPS 位置修正 inav_x/y（GPS 无效则静默跳过）
+        gps_fusion_correct_position();
 
         // 检查是否所有航点均已到达
         if(current_target_idx >= tracker_point_count)

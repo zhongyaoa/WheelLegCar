@@ -37,6 +37,7 @@
 #include "controler.h"
 #include "ins_tracker.h"
 #include "subject1_ui.h"
+#include "gps_fusion.h"
 // 打开新的工程或者工程移动了位置务必执行以下操作
 // 第一步 关闭上面所有打开的文件
 // 第二步 project->clean  等待下方进度条走完
@@ -59,6 +60,7 @@ int main(void)
     led_init();                         // LED 初始化
     led(off);
     ins_tracker_init();                 // 惯性导航循迹模块初始化
+    gps_fusion_init();                  // GPS 辅助融合初始化（UART2，需在 pit_ms_init 之前）
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
     subject1_ui_init();                 // 科目一 UI 初始化（含屏幕初始化）       
@@ -72,13 +74,14 @@ int main(void)
         if(btn_poll_tick >= 5)
         {
             btn_poll_tick = 0;
-            // UI 轮询（处理按键 + 屏幕刷新）                                     
-            subject1_ui_poll();                                                   
-                                                                                  
-            // 当 UI 在行进状态时，同步调用循迹更新                               
-            if(s1_ui_state == UI_STATE_RUNNING)                                   
-            {                                                                     
-                ins_tracker_update();                                             
+            gps_fusion_update();    // GPS 解析与航向校正（在 UI/循迹之前，保证数据最新）
+            // UI 轮询（处理按键 + 屏幕刷新）
+            subject1_ui_poll();
+
+            // 当 UI 在行进状态时，同步调用循迹更新
+            if(s1_ui_state == UI_STATE_RUNNING)
+            {
+                ins_tracker_update();
             }
         }
 

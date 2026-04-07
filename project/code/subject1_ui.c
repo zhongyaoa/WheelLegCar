@@ -18,6 +18,7 @@
 #include "controler.h"
 #include "posture_control.h"
 #include "ins_tracker.h"
+#include "gps_fusion.h"
 #include "zf_common_headfile.h"
 #include <math.h>
 #include <string.h>
@@ -658,6 +659,9 @@ static void poll_collect(void)
                 inav_x = 0.0f;
                 inav_y = 0.0f;
                 inav_active = 1;
+
+                // 启动 GPS 航向校正（车辆行驶后 GPS direction 稳定即自动校正）
+                gps_fusion_start_heading_cal(quat_yaw_deg);
             }
             waypoint_t *wp = &s1_waypoints[s1_waypoint_count];
             wp->x    = inav_x;
@@ -796,6 +800,9 @@ static void poll_standby(void)
         inav_y           = 0.0f;
         inav_active      = 1;
         inav_heading_ref = s1_collect_heading_ref;  // 使用采集时的航向，而非当前车头朝向
+
+        // 锁定起点 GPS 坐标，启动循迹位置修正
+        gps_fusion_start_tracking();
 
         // 注入 ins_tracker 并启动
         run_state = 1;
