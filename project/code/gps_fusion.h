@@ -1,71 +1,94 @@
 /*
     GPS 辅助惯性导航融合模块 (GPS-Aided INS Fusion)
 
-    集成到 subject1_ui 的方式：
-      1. 采集阶段：subject1_ui.c 在记录第一个点后调用 gps_fusion_start_heading_cal()，
-                   车辆行驶采集过程中 GPS direction 持续校正 inav_heading_ref。
-      2. 发车阶段：subject1_ui.c 发车前调用 gps_fusion_get_corrected_heading() 获取
-                   GPS 校正后的航向参考值（若 GPS 未校正成功则返回原值），
-                   以及 gps_fusion_start_tracking() 锁定起点 GPS 坐标。
-      3. 循迹阶段：到达路径点时调用 gps_fusion_correct_position() 修正 inav_x/y。
-      4. 降级保护：GPS 无效时所有接口均静默跳过，不影响纯惯性导航流程。
+    核心功能 —— GPS 静止采样：
+      按键采点时车辆静止，连续采集 GPS_SAMPLER_TOTAL_COUNT 帧 GPS 数据，
+      做野值剔除（距均值 > GPS_SAMPLER_REJECT_THRESH 的帧丢弃），
+      取均值作为该点的高精度 GPS 坐标，替代 INS 积分坐标。
 
-    主循环（50ms）：调用 gps_fusion_update() 解析 GPS 并更新航向校正滤波器。
+    坐标转换：
+      发车时，利用"起点→调头点"GPS 方位角确定初始车头朝向（真北角度），
+      将所有采集点的 GPS 经纬度转换为以起点为原点、车头方向为 Y 轴的 inav XY（m），
+      直接注入 ins_tracker，无需 INS 积分辅助。
+
+    运行时位置修正（可选）：
+      循迹过程中到达每个路径点时，仍可用实时 GPS 对 inav_x/y 做修正。
 */
 #ifndef _GPS_FUSION_H_
 #define _GPS_FUSION_H_
 
 #include "zf_common_typedef.h"
 
-// ─── 可调参数 ────────────────────────────────────────────────────────────────
+// ─── GPS 静止采样参数 ─────────────────────────────────────────────────────────
 
-// 航向校正：GPS direction 可信的最低车速（km/h）
-// 静止时 GPS 方向角噪声大，低于此阈值不采信
-#define GPS_FUSION_MIN_SPEED_KPH        0.5f
+// 每个点位的总采样帧数（GPS 10Hz → 30帧 ≈ 3秒）
+#define GPS_SAMPLER_TOTAL_COUNT    30
 
-// 航向校正：单帧 GPS direction 与滤波值差异超过此值认为跳变，丢弃
-#define GPS_FUSION_MAX_HEADING_JUMP_DEG 30.0f
+// 野值剔除阈值（m）：与第一轮均值偏差超过此值的帧被丢弃
+#define GPS_SAMPLER_REJECT_THRESH  2.0f
 
-// 航向校正：低通滤波系数（越大越平滑，响应越慢）
-#define GPS_FUSION_HEADING_ALPHA        0.10f
+// GPS 有效判据：卫星数不低于此值才采信
+#define GPS_SAMPLER_MIN_SATS       4
 
-// 航向校正：积累多少帧有效 GPS direction 后才输出校正结果
-#define GPS_FUSION_HEADING_WARMUP_CNT   5
+// ─── 循迹运行时位置修正参数 ──────────────────────────────────────────────────
 
-// 位置修正：GPS 与 INS 位置差距超过此值才执行修正
-#define GPS_FUSION_POS_CORRECT_THRESH_M 1.5f
+// GPS 与 INS 位置差超过此距离才执行修正（m）
+#define GPS_FUSION_POS_CORRECT_THRESH_M  1.5f
 
-// 位置修正：融合权重（0=不动，1=完全信任 GPS）
-#define GPS_FUSION_POS_WEIGHT           0.5f
+// 位置融合权重（0=不动，1=完全信任 GPS）
+#define GPS_FUSION_POS_WEIGHT            0.5f
 
-// ─── 外部接口 ────────────────────────────────────────────────────────────────
+// ─── GPS 采样状态 ─────────────────────────────────────────────────────────────
 
-// 初始化（在 main_cm7_0 中 gnss 使用前调用）
+typedef enum
+{
+    GPS_SAMPLER_IDLE    = 0,  // 未启动
+    GPS_SAMPLER_BUSY    = 1,  // 采集中
+    GPS_SAMPLER_DONE    = 2,  // 完成，结果可读
+    GPS_SAMPLER_FAIL    = 3,  // 失败（有效帧数不足）
+} gps_sampler_state_enum;
+
+extern gps_sampler_state_enum gps_sampler_state;
+
+// ─── 接口 ─────────────────────────────────────────────────────────────────────
+
+// 初始化（在 main 中调用一次，初始化 GNSS 驱动）
 void  gps_fusion_init(void);
 
-// 50ms 周期更新，解析 GPS 数据并持续更新航向滤波
-// 需在 subject1_ui_poll() / ins_tracker_update() 之前调用
+// 50ms 周期更新：解析新到的 GPS 帧，驱动采样状态机
+// 需在 subject1_ui_poll() 之前调用
 void  gps_fusion_update(void);
 
-// 采集阶段：记录第一个点后调用，启动 GPS 航向校正
-// origin_imu_heading_deg: 记录第一个点时存入的 quat_yaw_deg
-void  gps_fusion_start_heading_cal(float origin_imu_heading_deg);
+// ── GPS 静止采样 ──────────────────────────────────────────────────────────────
 
-// 查询 GPS 航向校正是否已成功（积累足够帧）
-uint8 gps_fusion_heading_calibrated(void);
+// 启动一次采样（重置计数器，开始收集 GPS_SAMPLER_TOTAL_COUNT 帧）
+void  gps_sampler_start(void);
 
-// 获取 GPS 校正后的初始航向参考值（°，IMU 坐标系）
-// 若尚未校正成功则原样返回 origin_imu_heading_deg
-float gps_fusion_get_corrected_heading(float origin_imu_heading_deg);
+// 查询当前已收到的有效帧数（用于 UI 进度条）
+uint8 gps_sampler_count(void);
 
-// 发车时：锁定起点 GPS 经纬度，切换到循迹位置修正模式
-void  gps_fusion_start_tracking(void);
+// 查询采样是否完成（DONE 或 FAIL）
+uint8 gps_sampler_ready(void);
 
-// 循迹阶段：到达路径点时调用，用 GPS 位置修正 inav_x / inav_y
-// 返回 1=完成修正，0=GPS 无效或差距过小未修正
+// 获取采样结果（仅在 gps_sampler_state == GPS_SAMPLER_DONE 时有效）
+// lat_out / lon_out：经过均值+野值剔除后的高精度经纬度
+void  gps_sampler_get_result(double *lat_out, double *lon_out);
+
+// ── 坐标转换 ──────────────────────────────────────────────────────────────────
+
+// 将 GPS 经纬度转换为相对"起点"的 inav XY（m）
+//   起点 GPS 坐标、初始航向（真北顺时针 °）由 gps_fusion_set_origin() 设置
+//   inav Y = 车头方向（前进），inav X = 车头右侧
+void  gps_fusion_set_origin(double origin_lat, double origin_lon,
+                             float initial_bearing_deg);
+
+void  gps_fusion_latlon_to_inav(double lat, double lon,
+                                 float *inav_x_out, float *inav_y_out);
+
+// ── 循迹运行时位置修正 ────────────────────────────────────────────────────────
+
+// 到达路径点时调用：用实时 GPS 修正 inav_x/y
+// 返回 1=修正成功，0=跳过
 uint8 gps_fusion_correct_position(void);
-
-// 将 GPS 经纬度转为相对起点的平面坐标（北→Y，东→X，单位 m）
-void  gps_latlon_to_xy(double lat, double lon, float *out_x, float *out_y);
 
 #endif

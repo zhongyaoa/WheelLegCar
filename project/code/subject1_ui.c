@@ -68,15 +68,17 @@ static uint8  s1_screen_dirty = 1;
 // 路线选择: 0 = 路线A（首桩左绕）, 1 = 路线B（首桩右绕）
 static uint8  s1_route_sel  = 0;
 
+// ── GPS 采样子状态 ──
+// 当 s1_gps_sampling == 1 时，COLLECT 状态进入等待 GPS 采样完成的子流程
+static uint8  s1_gps_sampling     = 0;  // 1 = 正在采样
+static uint8  s1_sampling_type    = POINT_TYPE_START;  // 本次采样的点类型
+
 // 按键消抖计数
 static uint32 btn_up_cnt   = 0;
 static uint32 btn_down_cnt = 0;
 static uint32 btn_left_cnt = 0;
 static uint32 btn_se_cnt   = 0;
 static uint32 btn_sw_cnt   = 0;
-
-// 采集阶段记录的初始航向（°），发车时用它做坐标系参考而非当前车头朝向
-static float s1_collect_heading_ref = 0.0f;
 
 // 行进中刷新降频
 static uint32 run_display_cnt = 0;
@@ -272,6 +274,45 @@ static void draw_collect(void)
     uint8 i;
     ips200_full(COLOR_BG);
 
+    // ── GPS 采样进行中：显示专用进度页 ──
+    if(s1_gps_sampling)
+    {
+        ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
+        ips200_show_string(20, 4, "== GPS Sampling ==");
+
+        ips200_set_color(point_type_color(s1_sampling_type), COLOR_BG);
+        ips200_show_string(8, 32, "Type:");
+        ips200_show_string(56, 32, point_type_name((point_type_enum)s1_sampling_type));
+
+        uint8 cnt = gps_sampler_count();
+        ips200_set_color(COLOR_TEXT, COLOR_BG);
+        ips200_show_string(8, 64, "Progress:");
+        ips200_show_uint(88, 64, cnt, 2);
+        ips200_show_char(112, 64, '/');
+        ips200_show_uint(120, 64, GPS_SAMPLER_TOTAL_COUNT, 2);
+
+        // 进度条（宽 200px）
+        uint16 bar_w = (uint16)((uint32)cnt * 200 / GPS_SAMPLER_TOTAL_COUNT);
+        ips200_draw_line(20, 100, 220, 100, 0x4208);
+        if(bar_w > 0)
+            ips200_draw_line(20, 100, (uint16)(20 + bar_w), 100, COLOR_HIGHLIGHT);
+
+        // GPS 状态
+        ips200_set_color(gnss.state ? COLOR_START_PT : COLOR_TURN_PT, COLOR_BG);
+        ips200_show_string(8, 130, "GPS:");
+        ips200_show_string(48, 130, gnss.state ? "OK" : "NO");
+        ips200_show_string(80, 130, "Sats:");
+        ips200_show_uint(120, 130, gnss.satellite_used, 2);
+
+        ips200_set_color(COLOR_TEXT, COLOR_BG);
+        ips200_show_string(8, 160, "Keep car STILL...");
+
+        ips200_set_color(0x8410, COLOR_BG);
+        ips200_show_string(8, 296, "Auto-record when done");
+        return;
+    }
+
+    // ── 正常采集页 ──
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
     ips200_show_string(20, 4, "== Collect Points ==");
 
@@ -285,24 +326,37 @@ static void draw_collect(void)
     ips200_show_string(180, 28, "T:");
     ips200_show_string(204, 28, s1_has_turn  ? "Y" : "N");
 
-    ips200_set_color(COLOR_TEXT, COLOR_BG);
-    ips200_show_string(8,  48, "X:");
-    ips200_show_float(28,  48, inav_x, 3, 2);
-    ips200_show_string(120, 48, "Y:");
-    ips200_show_float(140, 48, inav_y, 3, 2);
+    // GPS 状态行
+    ips200_set_color(gnss.state ? COLOR_START_PT : COLOR_TURN_PT, COLOR_BG);
+    ips200_show_string(8,  48, "GPS:");
+    ips200_show_string(48, 48, gnss.state ? "OK" : "NO");
+    ips200_show_string(80, 48, "Sats:");
+    ips200_show_uint(120, 48, gnss.satellite_used, 2);
 
     ips200_set_color(COLOR_TITLE, COLOR_BG);
-    ips200_show_string(8, 72, "# Type   X      Y");
+    ips200_show_string(8, 72, "# Type   lat/lon");
     ips200_draw_line(8, 88, 232, 88, 0x4208);
 
-    for(i = 0; i < s1_waypoint_count && i < 10; i++)
+    for(i = 0; i < s1_waypoint_count && i < 9; i++)
     {
         uint16 row_y = 92 + i * 16;
         ips200_set_color(point_type_color(s1_waypoints[i].type), COLOR_BG);
         ips200_show_uint(8,  row_y, i, 2);
         ips200_show_char(36, row_y, point_type_char(s1_waypoints[i].type));
-        ips200_show_float(60,  row_y, s1_waypoints[i].x, 3, 2);
-        ips200_show_float(150, row_y, s1_waypoints[i].y, 3, 2);
+        // 显示 GPS 坐标（仅显示小数后5位，避免溢出）
+        if(s1_waypoints[i].gps_valid)
+        {
+            // 显示经纬度末4位小数（已乘1e4取整显示，节省宽度）
+            int32 lat_frac = (int32)((s1_waypoints[i].lat - (int32)s1_waypoints[i].lat) * 10000.0);
+            int32 lon_frac = (int32)((s1_waypoints[i].lon - (int32)s1_waypoints[i].lon) * 10000.0);
+            ips200_show_int(52, row_y, lat_frac, 4);
+            ips200_show_char(100, row_y, '/');
+            ips200_show_int(108, row_y, lon_frac, 4);
+        }
+        else
+        {
+            ips200_show_string(52, row_y, "no GPS");
+        }
     }
 
     ips200_set_color(COLOR_TEXT, COLOR_BG);
@@ -343,7 +397,7 @@ static uint8  s1_routeB_count;
 static void prepare_routes(void)
 {
     uint8 i;
-    int16 j;
+    uint8 j;
 
     // 提取各类点
     s1_start_idx = -1;
@@ -360,6 +414,24 @@ static void prepare_routes(void)
     }
 
     if(s1_start_idx < 0 || s1_turn_idx < 0) return;
+
+    // ── 将 GPS 经纬度转为以起点为原点的 NE 平面坐标（北=Y，东=X，单位 m）
+    //    此时不考虑旋转，仅用于预览地图。发车时才转换到 inav XY。
+    {
+        double origin_lat = s1_waypoints[s1_start_idx].lat;
+        double origin_lon = s1_waypoints[s1_start_idx].lon;
+        const double R   = 6378137.0;
+
+        for(j = 0; j < s1_waypoint_count; j++)
+        {
+            if(!s1_waypoints[j].gps_valid) { s1_waypoints[j].x = 0; s1_waypoints[j].y = 0; continue; }
+            double dlat = s1_waypoints[j].lat - origin_lat;
+            double dlon = s1_waypoints[j].lon - origin_lon;
+            s1_waypoints[j].y = (float)(dlat * (GNSS_PI / 180.0) * R);           // 北向
+            s1_waypoints[j].x = (float)(dlon * (GNSS_PI / 180.0) * R
+                                        * cos(origin_lat * GNSS_PI / 180.0));    // 东向
+        }
+    }
 
     float start_x = s1_waypoints[s1_start_idx].x;
     float start_y = s1_waypoints[s1_start_idx].y;
@@ -617,7 +689,7 @@ static void reset_collect_data(void)
     s1_has_turn       = 0;
     s1_cur_point_type = POINT_TYPE_START;
     s1_route_sel      = 0;
-    s1_collect_heading_ref = 0.0f;
+    s1_gps_sampling   = 0;
     memset(s1_waypoints, 0, sizeof(s1_waypoints));
     inav_x      = 0.0f;
     inav_y      = 0.0f;
@@ -639,6 +711,55 @@ static void poll_home(void)
 
 static void poll_collect(void)
 {
+    // ── GPS 采样子流程 ────────────────────────────────────────────────────────
+    if(s1_gps_sampling)
+    {
+        // 采样进行中：持续刷新进度（gps_fusion_update 在主循环驱动采样器）
+        s1_screen_dirty = 1;
+
+        if(gps_sampler_ready())
+        {
+            s1_gps_sampling = 0;
+
+            if(gps_sampler_state == GPS_SAMPLER_DONE)
+            {
+                // 采样成功：写入航点
+                double lat, lon;
+                gps_sampler_get_result(&lat, &lon);
+
+                waypoint_t *wp = &s1_waypoints[s1_waypoint_count];
+                wp->lat       = lat;
+                wp->lon       = lon;
+                wp->gps_valid = 1;
+                wp->x         = 0.0f;   // 发车时换算
+                wp->y         = 0.0f;
+                wp->type      = (point_type_enum)s1_sampling_type;
+
+                if(s1_sampling_type == POINT_TYPE_START) s1_has_start = 1;
+                if(s1_sampling_type == POINT_TYPE_TURN)  s1_has_turn  = 1;
+                s1_waypoint_count++;
+                led(toggle);
+                wireless_printf("[UI] Waypoint %d recorded (GPS avg).\r\n",
+                                s1_waypoint_count - 1);
+            }
+            else
+            {
+                // GPS_SAMPLER_FAIL：GPS 始终无效，提示用户
+                wireless_printf("[UI] GPS sampling FAILED (no valid fix).\r\n");
+            }
+            s1_screen_dirty = 1;
+        }
+        // 采样中：屏蔽其他按键（防止误操作），只允许 SW 长按中断
+        if(btn_long_press(SW, &btn_sw_cnt, 20))
+        {
+            s1_gps_sampling = 0;
+            gps_sampler_state = GPS_SAMPLER_IDLE;  // 外部可见
+        }
+        return;  // 采样期间不处理其他按键
+    }
+
+    // ── 正常采集按键处理 ──────────────────────────────────────────────────────
+
     if(btn_rising(DOWN, &btn_down_cnt))
     {
         s1_cur_point_type = (point_type_enum)((s1_cur_point_type + 1) % 3);
@@ -652,26 +773,12 @@ static void poll_collect(void)
         else if(s1_cur_point_type == POINT_TYPE_TURN  && s1_has_turn)  {}
         else
         {
-            if(s1_waypoint_count == 0)
-            {
-                inav_heading_ref = quat_yaw_deg;
-                s1_collect_heading_ref = quat_yaw_deg;  // 保存采集时的航向
-                inav_x = 0.0f;
-                inav_y = 0.0f;
-                inav_active = 1;
-
-                // 启动 GPS 航向校正（车辆行驶后 GPS direction 稳定即自动校正）
-                gps_fusion_start_heading_cal(quat_yaw_deg);
-            }
-            waypoint_t *wp = &s1_waypoints[s1_waypoint_count];
-            wp->x    = inav_x;
-            wp->y    = inav_y;
-            wp->type = s1_cur_point_type;
-            if(s1_cur_point_type == POINT_TYPE_START) s1_has_start = 1;
-            if(s1_cur_point_type == POINT_TYPE_TURN)  s1_has_turn  = 1;
-            s1_waypoint_count++;
-            led(toggle);
-            s1_screen_dirty = 1;
+            // 启动 GPS 采样（车辆保持静止 ~3秒）
+            s1_sampling_type = s1_cur_point_type;
+            s1_gps_sampling  = 1;
+            gps_sampler_start();
+            s1_screen_dirty  = 1;
+            wireless_printf("[UI] GPS sampling started for type=%d\r\n", s1_sampling_type);
         }
     }
 
@@ -747,17 +854,71 @@ static void poll_standby(void)
     // LEFT: 发车
     if(btn_rising(LEFT, &btn_left_cnt))
     {
-        // 构建完整航点序列: 去程(直线) + 回程(绕桩)
+        uint8 i, k;
+
+        // ── 步骤1：用起点→调头点的 GPS 方位角建立 inav 坐标系 ──────────────
+        //    起点 GPS 坐标即 inav 原点，方位角即 inav Y 轴（前进方向）距真北角度
+        double origin_lat = s1_waypoints[s1_start_idx].lat;
+        double origin_lon = s1_waypoints[s1_start_idx].lon;
+        double turn_lat   = s1_waypoints[s1_turn_idx].lat;
+        double turn_lon   = s1_waypoints[s1_turn_idx].lon;
+
+        // get_two_points_azimuth 返回 0~360°，真北=0，顺时针
+        float bearing_deg = (float)get_two_points_azimuth(
+                                origin_lat, origin_lon, turn_lat, turn_lon);
+
+        // 建立坐标系：起点为原点，bearing_deg 为 Y 轴方向
+        gps_fusion_set_origin(origin_lat, origin_lon, bearing_deg);
+
+        wireless_printf("[UI] Launch: bearing=%.1f deg (GPS start->turn)\r\n", bearing_deg);
+
+        // ── 步骤2：将所有 GPS 采样点转换为 inav XY ──────────────────────────
+        for(i = 0; i < s1_waypoint_count; i++)
+        {
+            if(s1_waypoints[i].gps_valid)
+            {
+                gps_fusion_latlon_to_inav(s1_waypoints[i].lat, s1_waypoints[i].lon,
+                                          &s1_waypoints[i].x, &s1_waypoints[i].y);
+                wireless_printf("[UI] wp%d(%c): inav=(%.2f,%.2f)\r\n",
+                                i, point_type_char(s1_waypoints[i].type),
+                                s1_waypoints[i].x, s1_waypoints[i].y);
+            }
+        }
+
+        // ── 步骤3：重新用 inav XY 生成绕桩路线（覆盖预览阶段的 NE 版本） ──
+        //    回程桩序列
+        uint8 cone_idx = 0;
+        for(i = 0; i < s1_waypoint_count; i++)
+            if(s1_waypoints[i].type == POINT_TYPE_CONE)
+                s1_cone_indices[cone_idx++] = i;
+        s1_cone_count = cone_idx;
+
+        for(i = 0; i < s1_cone_count; i++)
+        {
+            s1_ret_cone_x[i] = s1_waypoints[s1_cone_indices[i]].x;
+            s1_ret_cone_y[i] = s1_waypoints[s1_cone_indices[i]].y;
+        }
+
+        float start_x = s1_waypoints[s1_start_idx].x;  // = 0
+        float start_y = s1_waypoints[s1_start_idx].y;  // = 0
+        float turn_x  = s1_waypoints[s1_turn_idx].x;
+        float turn_y  = s1_waypoints[s1_turn_idx].y;
+
+        s1_routeA_count = generate_bypass_route(
+            s1_ret_cone_x, s1_ret_cone_y, s1_cone_count,
+            turn_x, turn_y, start_x, start_y,
+            +1, s1_routeA_x, s1_routeA_y);
+        s1_routeB_count = generate_bypass_route(
+            s1_ret_cone_x, s1_ret_cone_y, s1_cone_count,
+            turn_x, turn_y, start_x, start_y,
+            -1, s1_routeB_x, s1_routeB_y);
+
+        // ── 步骤4：构建完整航点序列 ──────────────────────────────────────────
         float  full_x[S1_MAX_WAYPOINTS * 2 + 8];
         float  full_y[S1_MAX_WAYPOINTS * 2 + 8];
         uint8  full_count = 0;
 
-        float start_x = s1_waypoints[s1_start_idx].x;
-        float start_y = s1_waypoints[s1_start_idx].y;
-        float turn_x  = s1_waypoints[s1_turn_idx].x;
-        float turn_y  = s1_waypoints[s1_turn_idx].y;
-
-        // 去程: 起点 → 调头点（直线，只需两点）
+        // 去程: 起点 → 调头点
         full_x[full_count] = start_x;
         full_y[full_count] = start_y;
         full_count++;
@@ -765,11 +926,10 @@ static void poll_standby(void)
         full_y[full_count] = turn_y;
         full_count++;
 
-        // 回程: 使用选中路线的绕桩航点（跳过第一个点=调头点，因为已在去程末尾）
+        // 回程: 选中路线绕桩（跳过第一个点=调头点）
         const float *sel_x = (s1_route_sel == 0) ? s1_routeA_x : s1_routeB_x;
         const float *sel_y = (s1_route_sel == 0) ? s1_routeA_y : s1_routeB_y;
         uint8 sel_count     = (s1_route_sel == 0) ? s1_routeA_count : s1_routeB_count;
-        uint8 k;
         for(k = 1; k < sel_count; k++)
         {
             full_x[full_count] = sel_x[k];
@@ -777,7 +937,7 @@ static void poll_standby(void)
             full_count++;
         }
 
-        // 超程点: 沿最后一段行进方向再延伸 OVERMEASURE 米，确保越过终点线
+        // 超程点
         if(full_count >= 2)
         {
             float prev_x = full_x[full_count - 2];
@@ -795,14 +955,13 @@ static void poll_standby(void)
             }
         }
 
-        // 重置惯导
+        // ── 步骤5：设置 inav 坐标系并启动循迹 ───────────────────────────────
         inav_x           = 0.0f;
         inav_y           = 0.0f;
         inav_active      = 1;
-        inav_heading_ref = s1_collect_heading_ref;  // 使用采集时的航向，而非当前车头朝向
-
-        // 锁定起点 GPS 坐标，启动循迹位置修正
-        gps_fusion_start_tracking();
+        // inav_heading_ref = bearing_deg 对应的 IMU yaw 值 = 当前 quat_yaw_deg
+        // （车辆已被放回起点，头朝采集时相同方向，故 IMU 当前值≈采集时的 ref）
+        inav_heading_ref = quat_yaw_deg;
 
         // 注入 ins_tracker 并启动
         run_state = 1;

@@ -33,8 +33,11 @@ typedef enum
 // ─── 记录的单个点位 ──────────────────────────────────────
 typedef struct
 {
-    float          x;         // 惯性导航 x 坐标（m）
-    float          y;         // 惯性导航 y 坐标（m）
+    float          x;         // inav x 坐标（m），发车时由 GPS 经纬度换算填入
+    float          y;         // inav y 坐标（m），发车时由 GPS 经纬度换算填入
+    double         lat;       // GPS 纬度（采点时均值采样结果）
+    double         lon;       // GPS 经度（采点时均值采样结果）
+    uint8          gps_valid; // 1 = GPS 坐标已记录
     point_type_enum type;     // 点位类型
 } waypoint_t;
 
