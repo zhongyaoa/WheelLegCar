@@ -57,6 +57,7 @@
 ui_state_enum  s1_ui_state        = UI_STATE_HOME;
 waypoint_t     s1_waypoints[S1_MAX_WAYPOINTS];
 uint8          s1_waypoint_count  = 0;
+uint8          selected_subject   = 0;   // 首页高亮科目 (0=S1, 1=S2, 2=S3)
 
 // ===================== 内部状态 =====================
 static point_type_enum s1_cur_point_type = POINT_TYPE_START;
@@ -239,28 +240,44 @@ static uint8 generate_bypass_route(
 }
 
 // =========================================================================
-//  HOME 页面
+//  HOME 页面 —— 多科目选择
 // =========================================================================
 static void draw_home(void)
 {
+    static const char* subj_names[3] = {"1 Slalom Course", "2 Mine Clearance", "3 Rough Terrain"};
+    const char* subj_state_tag;
+    uint8 i;
+
     ips200_full(COLOR_BG);
     ips200_set_color(COLOR_TITLE, COLOR_BG);
-    ips200_show_string(40, 30, "WHEEL-LEG  CAR");
-    ips200_show_string(40, 55, "--------------");
+    ips200_show_string(40, 8, "WHEEL-LEG  CAR");
+    ips200_show_string(40, 26, "--------------");
 
-    ips200_set_color(COLOR_SELECTED, COLOR_BG);
-    ips200_show_string(30, 100, "> Subject 1");
-    ips200_set_color(COLOR_TEXT, COLOR_BG);
-    ips200_show_string(40, 118, "Slalom Course");
+    for(i = 0; i < 3; i++)
+    {
+        uint16 row_y = 56 + i * 60;
+        uint8  is_sel = (i == selected_subject);
 
-    ips200_set_color(0x8410, COLOR_BG);
-    ips200_show_string(30, 160, "  Subject 2");
-    ips200_show_string(40, 178, "(Coming Soon)");
-    ips200_show_string(30, 210, "  Subject 3");
-    ips200_show_string(40, 228, "(Coming Soon)");
+        if(i == 0)
+        {
+            subj_state_tag = (s1_waypoint_count > 0) ? "[READY]" : "[NO DATA]";
+        }
+        else
+        {
+            subj_state_tag = "[SOON]";
+        }
 
+        ips200_set_color(is_sel ? COLOR_SELECTED : COLOR_TEXT, COLOR_BG);
+        ips200_show_string(10, row_y, is_sel ? ">" : " ");
+        ips200_show_string(22, row_y, subj_names[i]);
+        ips200_set_color(is_sel ? COLOR_HIGHLIGHT : 0x8410, COLOR_BG);
+        ips200_show_string(22, row_y + 18, subj_state_tag);
+    }
+
+    ips200_draw_line(8, 238, 232, 238, 0x4208);
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
-    ips200_show_string(20, 296, "[UP] Enter Subject 1");
+    ips200_show_string(8, 246, "UP/DN:Select  LEFT:Enter");
+    ips200_show_string(8, 264, "SE(1s):Clear & Re-Collect");
 }
 
 // =========================================================================
@@ -597,7 +614,8 @@ static void draw_done(void)
     ips200_show_string(8, 180, "Dist:");
     ips200_show_float(56, 180, car_distance, 5, 2);
     ips200_set_color(COLOR_HIGHLIGHT, COLOR_BG);
-    ips200_show_string(20, 296, "[SW] Back to Home");
+    ips200_show_string(20, 260, "[UP]  Re-run (keep data)");
+    ips200_show_string(20, 280, "[SW]  Back to Home");
 }
 
 // =========================================================================
@@ -623,16 +641,63 @@ static void reset_collect_data(void)
     inav_active = 0;
 }
 
+// 清空当前选中科目的数据（仅 S1 有实际数据），用于"重新采点"
+static void clear_selected_subject_data(void)
+{
+    if(selected_subject == 0)
+    {
+        reset_collect_data();
+    }
+    // S2/S3 Coming Soon，暂无数据
+}
+
 // =========================================================================
 //  各状态按键处理
 // =========================================================================
 
 static void poll_home(void)
 {
+    // UP/DOWN: 切换选中科目
     if(btn_rising(UP, &btn_up_cnt))
     {
-        reset_collect_data();
-        switch_state(UI_STATE_COLLECT);
+        selected_subject = (selected_subject + 2) % 3;  // 向上循环
+        s1_screen_dirty = 1;
+    }
+    if(btn_rising(DOWN, &btn_down_cnt))
+    {
+        selected_subject = (selected_subject + 1) % 3;  // 向下循环
+        s1_screen_dirty = 1;
+    }
+
+    // LEFT: 进入选中科目
+    if(btn_rising(LEFT, &btn_left_cnt))
+    {
+        if(selected_subject == 0)  // 科目一
+        {
+            if(s1_waypoint_count >= 2 && s1_has_start && s1_has_turn)
+            {
+                // 已有采点数据：直接进路线预览
+                inav_active = 0;
+                prepare_routes();
+                switch_state(UI_STATE_PREVIEW);
+            }
+            else
+            {
+                // 无数据：进采点阶段
+                switch_state(UI_STATE_COLLECT);
+            }
+        }
+        // 科目2/3 Coming Soon，不处理
+    }
+
+    // SE 长按: 清空当前科目数据，重新采点
+    if(btn_long_press(SE, &btn_se_cnt, 20))
+    {
+        if(selected_subject == 0)
+        {
+            clear_selected_subject_data();
+            switch_state(UI_STATE_COLLECT);
+        }
     }
 }
 
@@ -696,7 +761,8 @@ static void poll_collect(void)
 
     if(btn_long_press(SW, &btn_sw_cnt, 20))
     {
-        reset_collect_data();
+        // 返回首页，数据保留（不清空）
+        inav_active = 0;
         switch_state(UI_STATE_HOME);
     }
 }
@@ -725,9 +791,74 @@ static void poll_preview(void)
 
     if(btn_long_press(SW, &btn_sw_cnt, 20))
     {
-        reset_collect_data();
+        // 返回首页，数据保留（不清空）
         switch_state(UI_STATE_HOME);
     }
+}
+
+// =========================================================================
+//  发车：构建航点序列并启动循迹（STANDBY 和重跑共用）
+// =========================================================================
+static void launch_subject1(void)
+{
+    float  full_x[S1_MAX_WAYPOINTS * 2 + 8];
+    float  full_y[S1_MAX_WAYPOINTS * 2 + 8];
+    uint8  full_count = 0;
+    uint8  k;
+
+    float start_x = s1_waypoints[s1_start_idx].x;
+    float start_y = s1_waypoints[s1_start_idx].y;
+    float turn_x  = s1_waypoints[s1_turn_idx].x;
+    float turn_y  = s1_waypoints[s1_turn_idx].y;
+
+    // 去程: 起点 → 调头点（直线）
+    full_x[full_count] = start_x;
+    full_y[full_count] = start_y;
+    full_count++;
+    full_x[full_count] = turn_x;
+    full_y[full_count] = turn_y;
+    full_count++;
+
+    // 回程: 使用选中路线的绕桩航点（跳过第一个点=调头点）
+    const float *sel_x = (s1_route_sel == 0) ? s1_routeA_x : s1_routeB_x;
+    const float *sel_y = (s1_route_sel == 0) ? s1_routeA_y : s1_routeB_y;
+    uint8 sel_count     = (s1_route_sel == 0) ? s1_routeA_count : s1_routeB_count;
+    for(k = 1; k < sel_count; k++)
+    {
+        full_x[full_count] = sel_x[k];
+        full_y[full_count] = sel_y[k];
+        full_count++;
+    }
+
+    // 超程点: 沿最后一段行进方向再延伸 OVERMEASURE 米
+    if(full_count >= 2)
+    {
+        float prev_x = full_x[full_count - 2];
+        float prev_y = full_y[full_count - 2];
+        float last_x = full_x[full_count - 1];
+        float last_y = full_y[full_count - 1];
+        float dx = last_x - prev_x;
+        float dy = last_y - prev_y;
+        float len = sqrtf(dx * dx + dy * dy);
+        if(len > 0.001f)
+        {
+            full_x[full_count] = last_x + (dx / len) * OVERMEASURE;
+            full_y[full_count] = last_y + (dy / len) * OVERMEASURE;
+            full_count++;
+        }
+    }
+
+    // 重置惯导，使用采集时的航向
+    inav_x           = 0.0f;
+    inav_y           = 0.0f;
+    inav_active      = 1;
+    inav_heading_ref = s1_collect_heading_ref;
+
+    // 注入 ins_tracker 并启动
+    run_state = 1;
+    ins_tracker_start_with_points(full_x, full_y, full_count);
+
+    switch_state(UI_STATE_RUNNING);
 }
 
 static void poll_standby(void)
@@ -743,65 +874,7 @@ static void poll_standby(void)
     // LEFT: 发车
     if(btn_rising(LEFT, &btn_left_cnt))
     {
-        // 构建完整航点序列: 去程(直线) + 回程(绕桩)
-        float  full_x[S1_MAX_WAYPOINTS * 2 + 8];
-        float  full_y[S1_MAX_WAYPOINTS * 2 + 8];
-        uint8  full_count = 0;
-
-        float start_x = s1_waypoints[s1_start_idx].x;
-        float start_y = s1_waypoints[s1_start_idx].y;
-        float turn_x  = s1_waypoints[s1_turn_idx].x;
-        float turn_y  = s1_waypoints[s1_turn_idx].y;
-
-        // 去程: 起点 → 调头点（直线，只需两点）
-        full_x[full_count] = start_x;
-        full_y[full_count] = start_y;
-        full_count++;
-        full_x[full_count] = turn_x;
-        full_y[full_count] = turn_y;
-        full_count++;
-
-        // 回程: 使用选中路线的绕桩航点（跳过第一个点=调头点，因为已在去程末尾）
-        const float *sel_x = (s1_route_sel == 0) ? s1_routeA_x : s1_routeB_x;
-        const float *sel_y = (s1_route_sel == 0) ? s1_routeA_y : s1_routeB_y;
-        uint8 sel_count     = (s1_route_sel == 0) ? s1_routeA_count : s1_routeB_count;
-        uint8 k;
-        for(k = 1; k < sel_count; k++)
-        {
-            full_x[full_count] = sel_x[k];
-            full_y[full_count] = sel_y[k];
-            full_count++;
-        }
-
-        // 超程点: 沿最后一段行进方向再延伸 OVERMEASURE 米，确保越过终点线
-        if(full_count >= 2)
-        {
-            float prev_x = full_x[full_count - 2];
-            float prev_y = full_y[full_count - 2];
-            float last_x = full_x[full_count - 1];
-            float last_y = full_y[full_count - 1];
-            float dx = last_x - prev_x;
-            float dy = last_y - prev_y;
-            float len = sqrtf(dx * dx + dy * dy);
-            if(len > 0.001f)
-            {
-                full_x[full_count] = last_x + (dx / len) * OVERMEASURE;
-                full_y[full_count] = last_y + (dy / len) * OVERMEASURE;
-                full_count++;
-            }
-        }
-
-        // 重置惯导
-        inav_x           = 0.0f;
-        inav_y           = 0.0f;
-        inav_active      = 1;
-        inav_heading_ref = s1_collect_heading_ref;  // 使用采集时的航向，而非当前车头朝向
-
-        // 注入 ins_tracker 并启动
-        run_state = 1;
-        ins_tracker_start_with_points(full_x, full_y, full_count);
-
-        switch_state(UI_STATE_RUNNING);
+        launch_subject1();
     }
 
     // SW 长按: 取消预备，停止平衡
@@ -847,11 +920,18 @@ static void poll_running(void)
 
 static void poll_done(void)
 {
+    // UP: 重跑（保留采点数据，直接进 STANDBY）
+    if(btn_rising(UP, &btn_up_cnt))
+    {
+        // balance_enable 已为 1（完成时未关闭），直接进预备等待发车
+        switch_state(UI_STATE_STANDBY);
+    }
+
+    // SW: 返回首页（数据保留，不清空）
     if(btn_rising(SW, &btn_sw_cnt))
     {
         run_state      = 0;
         balance_enable = 0;
-        reset_collect_data();
         switch_state(UI_STATE_HOME);
     }
 }
