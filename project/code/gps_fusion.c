@@ -23,6 +23,19 @@ static double s_origin_lon     = 0.0;
 static float  s_bearing_deg    = 0.0f;  // 初始车头朝向距真北的角度（顺时针，°）
 static uint8  s_origin_valid   = 0;
 
+// ─── 位置卡尔曼滤波器内部状态 ────────────────────────────────────────────────
+// 标量独立 2 轴：X 和 Y 各维护一个协方差 P，共享同一套 Q/R 参数
+// 状态：inav_x / inav_y（直接使用 posture_control 中的全局变量）
+// 协方差矩阵简化为对角：Px, Py
+
+static float kf_Px = 1.0f;    // X 轴位置估计方差（m²）
+static float kf_Py = 1.0f;    // Y 轴位置估计方差（m²）
+static uint8 kf_init_done = 0; // 已初始化标志
+
+// 上一帧GPS数据，用于判断是否收到新帧（避免重复更新）
+static double s_last_gps_lat = 0.0;
+static double s_last_gps_lon = 0.0;
+
 // ─── 工具函数 ─────────────────────────────────────────────────────────────────
 
 // 两点间距离（Haversine，返回 m）
@@ -39,6 +52,7 @@ void gps_fusion_init(void)
     gps_sampler_state = GPS_SAMPLER_IDLE;
     s_sample_cnt      = 0;
     s_origin_valid    = 0;
+    kf_init_done      = 0;
 }
 
 // ─── GPS 采样器 ───────────────────────────────────────────────────────────────
@@ -159,31 +173,95 @@ void gps_fusion_latlon_to_inav(double lat, double lon,
     *inav_x_out = -ne_n * sinf(theta) + ne_e * cosf(theta);
 }
 
-// ─── 循迹运行时位置修正 ───────────────────────────────────────────────────────
+// ─── 位置卡尔曼滤波器 ─────────────────────────────────────────────────────────
+
+void gps_fusion_kf_init(void)
+{
+    // 以当前 inav_x/y 作为初始状态，方差设为较大值（不确定性高）
+    kf_Px        = 1.0f;
+    kf_Py        = 1.0f;
+    kf_init_done = 1;
+    s_last_gps_lat = 0.0;
+    s_last_gps_lon = 0.0;
+    wireless_printf("[KF] position KF initialized. x=%.2f y=%.2f\r\n", inav_x, inav_y);
+}
+
+// 预测步骤：由 pit_call_back 中 INS 积分代码调用（每 1ms）
+// dx/dy：本毫秒 inav 坐标增量（m）
+void gps_fusion_kf_predict(float dx, float dy, float dt)
+{
+    if(!kf_init_done) return;
+
+    // 状态预测：INS 积分已直接更新了 inav_x/y，这里只更新方差
+    // P_k|k-1 = P_k-1 + Q * dt²（位置误差方差按速度噪声传播）
+    float q_dt2 = KF_PROCESS_NOISE_Q * dt * dt;
+    kf_Px += q_dt2;
+    kf_Py += q_dt2;
+
+    (void)dx; (void)dy;  // 状态已由调用方更新，此处不重复
+}
+
+// 内部：执行卡尔曼观测更新（GPS观测 → 修正 inav_x/y）
+static void kf_do_gps_update(float gps_x, float gps_y, float R_meas)
+{
+    // 卡尔曼增益：K = P / (P + R)
+    float Kx = kf_Px / (kf_Px + R_meas);
+    float Ky = kf_Py / (kf_Py + R_meas);
+
+    // 新息（Innovation）
+    float innov_x = gps_x - inav_x;
+    float innov_y = gps_y - inav_y;
+
+    // 跳变保护：若新息过大（GPS野值），压缩修正量
+    float innov_dist = sqrtf(innov_x * innov_x + innov_y * innov_y);
+    if(innov_dist > KF_GPS_MAX_JUMP_M)
+    {
+        float scale = KF_GPS_MAX_JUMP_M / innov_dist;
+        innov_x *= scale;
+        innov_y *= scale;
+        wireless_printf("[KF] GPS jump clipped: %.2fm -> %.2fm\r\n",
+                        innov_dist, KF_GPS_MAX_JUMP_M);
+    }
+
+    float old_x = inav_x, old_y = inav_y;
+
+    // 状态更新
+    inav_x += Kx * innov_x;
+    inav_y += Ky * innov_y;
+
+    // 方差更新：P = (1 - K) * P
+    kf_Px *= (1.0f - Kx);
+    kf_Py *= (1.0f - Ky);
+
+    wireless_printf("[KF] GPS update: ins(%.2f,%.2f)->fused(%.2f,%.2f) K=(%.3f,%.3f) R=%.2f\r\n",
+                    old_x, old_y, inav_x, inav_y, Kx, Ky, R_meas);
+}
+
+// ─── 循迹运行时位置修正（对外接口，保持兼容） ─────────────────────────────────
 
 uint8 gps_fusion_correct_position(void)
 {
-    if(!s_origin_valid)
+    if(!s_origin_valid || !kf_init_done)
         return 0;
-    if(!gnss.state || gnss.satellite_used < GPS_SAMPLER_MIN_SATS)
+    if(!gnss.state || gnss.satellite_used < KF_MIN_SATS_FOR_UPDATE)
         return 0;
 
     float gps_ix, gps_iy;
     gps_fusion_latlon_to_inav(gnss.latitude, gnss.longitude, &gps_ix, &gps_iy);
 
-    float dx   = gps_ix - inav_x;
-    float dy   = gps_iy - inav_y;
-    float dist = sqrtf(dx * dx + dy * dy);
+    // 根据卫星数动态调整观测噪声（卫星少 → R 更大 → 更不信任GPS）
+    float R_meas = KF_MEAS_NOISE_R_BASE;
+    if(gnss.satellite_used < KF_SAT_GOOD_COUNT)
+    {
+        uint8 sat_deficit = KF_SAT_GOOD_COUNT - gnss.satellite_used;
+        float penalty = 1.0f;
+        uint8 i;
+        for(i = 0; i < sat_deficit; i++)
+            penalty *= KF_SAT_PENALTY_FACTOR;
+        R_meas *= penalty;
+    }
 
-    if(dist < GPS_FUSION_POS_CORRECT_THRESH_M)
-        return 0;
-
-    float old_x = inav_x, old_y = inav_y;
-    inav_x += GPS_FUSION_POS_WEIGHT * dx;
-    inav_y += GPS_FUSION_POS_WEIGHT * dy;
-
-    wireless_printf("[GPS] pos corrected: ins(%.2f,%.2f)->gps(%.2f,%.2f) diff=%.2fm\r\n",
-                    old_x, old_y, gps_ix, gps_iy, dist);
+    kf_do_gps_update(gps_ix, gps_iy, R_meas);
     return 1;
 }
 
@@ -196,6 +274,38 @@ void gps_fusion_update(void)
     {
         gnss_data_parse();
         gnss_flag = 0;
+
+        // 如果循迹中且有有效GPS，立即做卡尔曼观测更新（连续修正，不等路径点）
+        if(inav_active && kf_init_done && s_origin_valid)
+        {
+            if(gnss.state && gnss.satellite_used >= KF_MIN_SATS_FOR_UPDATE)
+            {
+                // 判断是否是新的GPS位置（避免同一帧数据重复更新）
+                if(gnss.latitude != s_last_gps_lat || gnss.longitude != s_last_gps_lon)
+                {
+                    s_last_gps_lat = gnss.latitude;
+                    s_last_gps_lon = gnss.longitude;
+
+                    float gps_ix, gps_iy;
+                    gps_fusion_latlon_to_inav(gnss.latitude, gnss.longitude,
+                                              &gps_ix, &gps_iy);
+
+                    // 根据卫星数动态调整观测噪声
+                    float R_meas = KF_MEAS_NOISE_R_BASE;
+                    if(gnss.satellite_used < KF_SAT_GOOD_COUNT)
+                    {
+                        uint8 sat_deficit = KF_SAT_GOOD_COUNT - gnss.satellite_used;
+                        float penalty = 1.0f;
+                        uint8 i;
+                        for(i = 0; i < sat_deficit; i++)
+                            penalty *= KF_SAT_PENALTY_FACTOR;
+                        R_meas *= penalty;
+                    }
+
+                    kf_do_gps_update(gps_ix, gps_iy, R_meas);
+                }
+            }
+        }
     }
 
     // 驱动采样状态机
@@ -220,3 +330,4 @@ void gps_fusion_update(void)
         sampler_finalize();
     }
 }
+

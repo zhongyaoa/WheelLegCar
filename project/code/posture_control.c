@@ -1,4 +1,5 @@
 #include "posture_control.h"
+#include "gps_fusion.h"
 #include "math.h"
 
 uint32 sys_times = 0;
@@ -248,14 +249,20 @@ void pit_call_back(void)
         if(func_abs(car_speed) < INAV_STATIONARY_SPEED_RPM)
         {
             inav_speed_mps_filtered = 0.0f;
+            // 静止时也推进卡尔曼方差（过程噪声累积，以便GPS更新时有合理增益）
+            gps_fusion_kf_predict(0.0f, 0.0f, 0.001f);
         }
         else
         {
             // 当前航向相对参考航向的偏差（rad）
             float heading_rad = (quat_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
             // Y 轴 = 参考航向方向（前进），X 轴 = 参考航向右侧 90°
-            inav_y += inav_speed_mps_filtered * cosf(heading_rad) * 0.001f;  // dt = 1ms
-            inav_x += inav_speed_mps_filtered * sinf(heading_rad) * 0.001f;
+            float dx = inav_speed_mps_filtered * sinf(heading_rad) * 0.001f;
+            float dy = inav_speed_mps_filtered * cosf(heading_rad) * 0.001f;
+            inav_y += dy;  // dt = 1ms
+            inav_x += dx;
+            // 通知卡尔曼滤波器INS预测步骤（更新方差）
+            gps_fusion_kf_predict(dx, dy, 0.001f);
         }
     }
     else

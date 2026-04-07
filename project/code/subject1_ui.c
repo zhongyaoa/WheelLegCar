@@ -965,6 +965,7 @@ static void poll_standby(void)
 
         // 注入 ins_tracker 并启动
         run_state = 1;
+        gps_fusion_kf_init();   // 初始化位置卡尔曼滤波器（以当前 inav_x/y 为初始状态）
         ins_tracker_start_with_points(full_x, full_y, full_count);
 
         switch_state(UI_STATE_RUNNING);

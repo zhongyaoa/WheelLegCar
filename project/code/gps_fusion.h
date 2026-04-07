@@ -30,13 +30,25 @@
 // GPS 有效判据：卫星数不低于此值才采信
 #define GPS_SAMPLER_MIN_SATS       4
 
-// ─── 循迹运行时位置修正参数 ──────────────────────────────────────────────────
+// ─── 位置卡尔曼滤波参数 ───────────────────────────────────────────────────────
 
-// GPS 与 INS 位置差超过此距离才执行修正（m）
-#define GPS_FUSION_POS_CORRECT_THRESH_M  1.5f
+// 过程噪声（INS积分方差，单位 m²/s，越小越信任INS）
+// INS 主导：设为较小值（轮式里程计 + 陀螺航向，短距积分误差小）
+#define KF_PROCESS_NOISE_Q               0.002f
 
-// 位置融合权重（0=不动，1=完全信任 GPS）
-#define GPS_FUSION_POS_WEIGHT            0.5f
+// 观测噪声基准（GPS方差基准，单位 m²，越大越不信任GPS）
+// 开放天空好天气约 0.09（误差 0.3m），阴天/遮挡时自动乘以卫星数惩罚因子
+#define KF_MEAS_NOISE_R_BASE             0.09f
+
+// GPS卫星数惩罚：卫星数每少于 8 颗，R 乘以此因子（降低GPS权重）
+#define KF_SAT_PENALTY_FACTOR            1.5f
+#define KF_SAT_GOOD_COUNT                8
+
+// GPS 跳变保护：单次更新最大允许修正量（m）；超出时按比例压缩，防止野值拉偏
+#define KF_GPS_MAX_JUMP_M                3.0f
+
+// 卡尔曼滤波启用门控：GPS 卫星数低于此值时跳过观测更新（完全依靠INS）
+#define KF_MIN_SATS_FOR_UPDATE           4
 
 // ─── GPS 采样状态 ─────────────────────────────────────────────────────────────
 
@@ -85,9 +97,16 @@ void  gps_fusion_set_origin(double origin_lat, double origin_lon,
 void  gps_fusion_latlon_to_inav(double lat, double lon,
                                  float *inav_x_out, float *inav_y_out);
 
-// ── 循迹运行时位置修正 ────────────────────────────────────────────────────────
+// ── 循迹运行时位置修正（卡尔曼滤波） ─────────────────────────────────────────
 
-// 到达路径点时调用：用实时 GPS 修正 inav_x/y
+// 初始化卡尔曼滤波器（在 gps_fusion_set_origin 后、循迹启动前调用）
+void  gps_fusion_kf_init(void);
+
+// INS 预测步骤：每 1ms 由 pit_call_back 中 inav 积分代码调用
+// dx/dy：本毫秒 inav 坐标增量（m）；dt：积分步长（s，固定 0.001）
+void  gps_fusion_kf_predict(float dx, float dy, float dt);
+
+// 到达路径点时调用：用实时 GPS 修正 inav_x/y（卡尔曼观测更新）
 // 返回 1=修正成功，0=跳过
 uint8 gps_fusion_correct_position(void);
 
