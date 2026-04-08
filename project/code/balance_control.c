@@ -1,4 +1,5 @@
 #include "balance_control.h"
+#include "small_driver_uart_control.h"
 
 // --- 全局变量定义 ---
 cascade_value_struct roll_balance_cascade;
@@ -97,6 +98,20 @@ static bool is_static_state(float ax_g, float ay_g, float az_g)
 
 
 
+// 车轮里程计辅助偏航：利用左右轮速差估计陀螺Z轴偏置并补偿
+// 轮距（m），需根据实际车辆测量后调整
+#define WHEEL_TRACK_M       0.17f
+// 轮径（m），与 posture_control.h 中 WHEEL_DIAMETER(cm) 一致
+#define WHEEL_RADIUS_M      (6.4f * 0.01f / 2.0f)
+// RPM -> rad/s 转换系数
+#define RPM_TO_RADS         (2.0f * 3.14159265f / 60.0f)
+// 偏置追踪增益：越大跟踪越快但噪声越大，建议 0.0005~0.002
+#define YAW_BIAS_GAIN       0.001f
+// 偏置限幅（rad/s），防止异常速度数据污染
+#define YAW_BIAS_LIMIT      0.05f
+
+static float gyro_z_bias = 0.0f;  // 估计的陀螺Z轴偏置 (rad/s)
+
 void quaternion_module_calculate(cascade_value_struct *cascade_value)
 {
     static float first_count_time = 0;  //首次计算时间计数器(用于快速收敛)
@@ -107,6 +122,28 @@ void quaternion_module_calculate(cascade_value_struct *cascade_value)
     x = (float)(GYRO_DATA_X / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
     y = (float)(GYRO_DATA_Y / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
     z = (float)(GYRO_DATA_Z / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
+
+    // 车轮速度差估计偏航角速度 (rad/s)
+    // Motor_speed_right_raw - Motor_speed_left_raw > 0 时车辆左转
+    // GYRO_DATA_Z = -imu660ra_gyro_z，左转时gyro_z<0，故z>0，与omega_wheel符号一致
+    int16 spd_left  = Motor_speed_left_raw;
+    int16 spd_right = Motor_speed_right_raw;
+    float omega_wheel = ((float)(spd_right - spd_left))
+                        * RPM_TO_RADS * WHEEL_RADIUS_M / WHEEL_TRACK_M;
+
+    // 仅在低速、小转弯量时更新偏置，防止转弯时误差污染
+    int8 should_update_bias = (func_abs((int32)(spd_left + spd_right)) < 600)
+                           && (func_abs((int32)(spd_right - spd_left)) < 160);
+    if(should_update_bias)
+    {
+        float bias_err = omega_wheel - z;
+        gyro_z_bias += YAW_BIAS_GAIN * bias_err;
+        if(gyro_z_bias >  YAW_BIAS_LIMIT) gyro_z_bias =  YAW_BIAS_LIMIT;
+        if(gyro_z_bias < -YAW_BIAS_LIMIT) gyro_z_bias = -YAW_BIAS_LIMIT;
+    }
+
+    // 用偏置补偿陀螺Z轴
+    z -= gyro_z_bias;
 
     // 加速度计数据转换：原始数据->g为单位（1g≈9.8m/s2）
     float ax_g = (float)ACC_DATA_X / ACC_TRANSITION_FACTOR;
