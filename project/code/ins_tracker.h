@@ -26,15 +26,11 @@
 #define INAV_TRACKER_TURN_SLOWDOWN_ANG 25.0f      // 转角大于该值时开始按角度降速 (deg)
 #define INAV_TRACKER_TURN_STOP_ANG     70.0f      // 转角接近该值时降到最低速度 (deg)
 
-// ── 前瞻切换参数 ────────────────────────────────────────────────────────────
-// 同时满足距离近 + 偏角大，则提前切换下一航点，避免到达后急转
-#define INAV_TRACKER_LOOKAHEAD_DIST    0.40f      // 前瞻切换距离阈值 (m)
-#define INAV_TRACKER_LOOKAHEAD_ANG     40.0f      // 前瞻切换角度阈值 (deg)
-
 // ── Yaw PD 控制参数 ──────────────────────────────────────────────────────────
 // KD 作用于 imu660ra_gyro_z（陀螺仪原始信号，°/s），信号比差分 yaw_rate 更干净
+// ⚠ KD 符号：若实车转向阻尼方向反，将 KD 改为负值
 #define TRACKER_YAW_KP                 8.0f       // 偏航角度增益 (duty/°)
-#define TRACKER_YAW_KD                 -1.5f       // 偏航角速度阻尼 (duty/(°/s))，原0.5→1.5
+#define TRACKER_YAW_KD                 1.5f       // 偏航角速度阻尼 (duty/(°/s))
 
 typedef enum
 {

@@ -274,43 +274,12 @@ void ins_tracker_nav_update(void)
     float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
     float heading_err         = normalize_angle(bearing_local - current_heading_rel);
 
-    // ── 航点切换判定（三重条件，任一满足即切换）────────────────────────────
-    uint8 do_switch = 0;
-
-    // 判定1：正常到达（dist < ARRIVE_DIST）
+    // ── 航点切换判定：仅凭距离判定到达 ─────────────────────────────────────
+    // 注意：科目一需要在调头点掉头后沿回程蛇行，回程各航点在刚到调头点时均
+    //       相对车身偏侧/偏后，若使用"目标在身后"或"前瞻偏角"等条件极易
+    //       在同一帧内级联跳过所有回程航点，导致到调头点即宣告完成。
+    //       因此只使用 dist < ARRIVE_DIST 作为唯一切换触发条件，简单可靠。
     if(dist < INAV_TRACKER_ARRIVE_DIST)
-    {
-        do_switch = 1;
-    }
-
-    // 判定2：目标已在机身后方（防止超调后死追）
-    // 将目标→当前向量投影到当前航向，投影值为负则目标在身后
-    if(!do_switch)
-    {
-        // inav 坐标系：Y轴=initial_heading方向（前进），X轴=右侧
-        // 当前航向向量（单位向量）
-        float heading_rad = current_heading_rel * (3.14159265f / 180.0f);
-        float fwd_x = sinf(heading_rad);   // X分量（右向）
-        float fwd_y = cosf(heading_rad);   // Y分量（前向）
-        float dx = target_x - cur_x;
-        float dy = target_y - cur_y;
-        float dot = dx * fwd_x + dy * fwd_y;
-        if(dot < 0.0f)
-        {
-            do_switch = 1;  // 目标在身后，立即切换
-        }
-    }
-
-    // 判定3：前瞻切换（距离较近 且 偏角大，提前切换以形成流畅弧线）
-    if(!do_switch
-       && dist < INAV_TRACKER_LOOKAHEAD_DIST
-       && fabsf(heading_err) > INAV_TRACKER_LOOKAHEAD_ANG)
-    {
-        do_switch = 1;
-    }
-
-    // 执行切换
-    if(do_switch)
     {
         current_target_idx++;
 
