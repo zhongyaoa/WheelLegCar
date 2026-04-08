@@ -332,7 +332,7 @@ void ins_tracker_ctrl_update(void)
     // 航向 PD 控制
     // imu660ra_gyro_z 为原始计数，imu660ra_gyro_transition() 将其转为 °/s
     float gyro_z_dps = imu660ra_gyro_transition(imu660ra_gyro_z);
-    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * gyro_z_dps);
+    int16 td = (int16)(TRACKER_YAW_KP * heading_err + TRACKER_YAW_KD * gyro_z_dps);
     turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
 
     // 速度斜坡（在此处做，保证 target_speed 变化平滑）
