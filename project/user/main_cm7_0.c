@@ -20,9 +20,9 @@ int main(void)
 {
     clock_init(SYSTEM_CLOCK_250M);      // 时钟配置及系统初始化<务必保留>
     debug_init();                       // 调试串口信息初始化
-
+    balance_cascade_init();
     imu660ra_init();
-
+    steer_control_init();   
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
 
@@ -31,7 +31,8 @@ int main(void)
     {
 
         system_delay_ms(10);
-        printf("%d,%d,%d,%d,%d,%d\n", imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z, imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z);
+        //printf("%d,%d,%d,%d,%d,%d\n", imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z, imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z);
+        printf("%f\n", roll_balance_cascade.posture_value.yaw);
     }
         
         
