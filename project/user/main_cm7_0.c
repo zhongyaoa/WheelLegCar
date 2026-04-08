@@ -31,8 +31,11 @@ int main(void)
     {
 
         system_delay_ms(10);
-        //printf("%d,%d,%d,%d,%d,%d\n", imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z, imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z);
-        printf("%f\n", roll_balance_cascade.posture_value.yaw);
+        printf("%d,%d,%d,%d,%d,%d,%f\n", 
+            imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z, 
+            imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, 
+            roll_balance_cascade.posture_value.yaw);
+        //printf("%f\n", roll_balance_cascade.posture_value.yaw);
     }
         
         
