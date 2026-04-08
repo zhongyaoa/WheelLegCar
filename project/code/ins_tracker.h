@@ -34,7 +34,7 @@
 // ── Yaw PD 控制参数 ──────────────────────────────────────────────────────────
 // KD 作用于 imu660ra_gyro_z（陀螺仪原始信号，°/s），信号比差分 yaw_rate 更干净
 #define TRACKER_YAW_KP                 8.0f       // 偏航角度增益 (duty/°)
-#define TRACKER_YAW_KD                 1.5f       // 偏航角速度阻尼 (duty/(°/s))，原0.5→1.5
+#define TRACKER_YAW_KD                 -1.5f       // 偏航角速度阻尼 (duty/(°/s))，原0.5→1.5
 
 typedef enum
 {
