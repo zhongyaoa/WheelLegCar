@@ -198,8 +198,8 @@ void imu660ra_get_gyro (void)
 
     imu660ra_read_registers(IMU660RA_GYRO_ADDRESS, dat, 6);
     imu660ra_gyro_x = (int16)(((uint16)dat[1]<<8 | dat[0]));
-    imu660ra_gyro_y = (int16)(((uint16)dat[3]<<8 | dat[2]))-4;
-    imu660ra_gyro_z = (int16)(((uint16)dat[5]<<8 | dat[4]));
+    imu660ra_gyro_y = (int16)(((uint16)dat[3]<<8 | dat[2]))-8;
+    imu660ra_gyro_z = (int16)(((uint16)dat[5]<<8 | dat[4]))+2;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
