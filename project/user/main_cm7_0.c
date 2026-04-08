@@ -72,14 +72,10 @@ int main(void)
         if(btn_poll_tick >= 5)
         {
             btn_poll_tick = 0;
-            // UI 轮询（处理按键 + 屏幕刷新）                                     
-            subject1_ui_poll();                                                   
-                                                                                  
-            // 当 UI 在行进状态时，同步调用循迹更新                               
-            if(s1_ui_state == UI_STATE_RUNNING)                                   
-            {                                                                     
-                ins_tracker_update();                                             
-            }
+            // UI 轮询（处理按键 + 屏幕刷新）
+            subject1_ui_poll();
+            // 注意：ins_tracker_nav_update() / ins_tracker_ctrl_update() 已迁移至
+            // pit_call_back()（分别每10ms/5ms调用），此处无需再调用
         }
 
         system_delay_ms(10);

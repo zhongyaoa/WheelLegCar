@@ -12,13 +12,29 @@
 #include "zf_common_typedef.h"
 
 #define INAV_TRACKER_MAX_POINTS        40         // 最多记录点位数（含起点，需容纳去程+回程）
-#define INAV_TRACKER_ARRIVE_DIST       0.1f       // 到达判定距离 (m)
-#define INAV_TRACKER_CRUISE_SPEED      (600.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
-#define INAV_TRACKER_MIN_SPEED         (200.0f)  // 最低循迹速度，避免转向时完全没速度
-#define INAV_TRACKER_SLOWDOWN_DIST     1.0f       // 距离小于该值时开始按距离降速 (m)
+
+// ── 速度参数（可调）────────────────────────────────────────────────────────
+#define INAV_TRACKER_CRUISE_SPEED      800.0f     // 直线巡航速度（RPM），原600→800
+#define INAV_TRACKER_MIN_SPEED         250.0f     // 最低循迹速度，原200→250
+#define INAV_TRACKER_SPEED_RAMP_STEP   80.0f      // 每次循迹更新允许的目标速度最大变化量，原60→80
+
+// ── 距离参数 ────────────────────────────────────────────────────────────────
+#define INAV_TRACKER_ARRIVE_DIST       0.15f      // 到达判定距离 (m)，原0.1→0.15
+#define INAV_TRACKER_SLOWDOWN_DIST     0.7f       // 距离小于该值时开始按距离降速 (m)，原1.0→0.7
+
+// ── 角度降速参数（按转角减速，用于大角度转弯保护）──────────────────────────
 #define INAV_TRACKER_TURN_SLOWDOWN_ANG 25.0f      // 转角大于该值时开始按角度降速 (deg)
 #define INAV_TRACKER_TURN_STOP_ANG     70.0f      // 转角接近该值时降到最低速度 (deg)
-#define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量
+
+// ── 前瞻切换参数 ────────────────────────────────────────────────────────────
+// 同时满足距离近 + 偏角大，则提前切换下一航点，避免到达后急转
+#define INAV_TRACKER_LOOKAHEAD_DIST    0.40f      // 前瞻切换距离阈值 (m)
+#define INAV_TRACKER_LOOKAHEAD_ANG     40.0f      // 前瞻切换角度阈值 (deg)
+
+// ── Yaw PD 控制参数 ──────────────────────────────────────────────────────────
+// KD 作用于 imu660ra_gyro_z（陀螺仪原始信号，°/s），信号比差分 yaw_rate 更干净
+#define TRACKER_YAW_KP                 8.0f       // 偏航角度增益 (duty/°)
+#define TRACKER_YAW_KD                 1.5f       // 偏航角速度阻尼 (duty/(°/s))，原0.5→1.5
 
 typedef enum
 {
@@ -33,7 +49,16 @@ extern uint8 tracker_point_count;
 // 在主循环中轮询按键（建议每 10~20ms 调用一次）
 void ins_tracker_button_poll(void);
 
-// 在主循环中周期调用以更新循迹逻辑（建议每 10~20ms 调用一次）
+// ── 循迹更新（拆分为两层，均在 pit_call_back 中调用）──────────────────────
+// 导航外环：含 sqrtf/atan2f 等重运算，在 pit_call_back 中每 10ms 调用一次
+//   完成：距离计算、目标方位角、前瞻航点切换、自适应速度
+void ins_tracker_nav_update(void);
+
+// 控制内环：仅乘加运算，在 pit_call_back 中每 5ms 调用一次
+//   完成：航向 PD 输出 → turn_diff_ext，速度斜坡 → target_speed
+void ins_tracker_ctrl_update(void);
+
+// 兼容包装：顺序调用 nav_update + ctrl_update（主循环或旧调用点使用）
 void ins_tracker_update(void);
 
 // 初始化循迹模块

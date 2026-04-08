@@ -3,6 +3,10 @@
 #include "controler.h"
 #include "math.h"
 
+// imu660ra_gyro_z: 原始计数 (int16)，用 imu660ra_gyro_transition() 转为 °/s
+// 该宏定义在 zf_device_imu660ra.h（已通过 zf_common_headfile.h 包含）
+extern int16 imu660ra_gyro_z;
+
 // ===== 状态 =====
 tracker_state_enum tracker_state       = TRACKER_STATE_IDLE;
 uint8              tracker_point_count = 0;
@@ -15,10 +19,6 @@ static float recorded_y[INAV_TRACKER_MAX_POINTS];
 static uint8 heading_lock_count = 0;
 static float heading_lock_sum = 0.0f;
 
-// 初始航向锁定滤波
-//static uint8 heading_lock_count = 0;
-//static float heading_lock_sum = 0.0f;
-
 // 记录第一个点时锁定的初始航向角（°），后续回到此航向=0误差
 static float initial_heading_deg = 0.0f;
 
@@ -28,9 +28,11 @@ static uint8 current_target_idx = 1;
 static uint32 btn_up_hold   = 0;
 static uint32 btn_left_hold = 0;
 
-// 循迹 yaw PD 参数
-#define TRACKER_YAW_KP   8.0f   // 偏航角度增益 (duty/°)
-#define TRACKER_YAW_KD   0.5f   // 偏航角速度阻尼 (duty/(°/s))
+// ===== 导航外环 → 控制内环 共享状态（volatile 保证中断间可见性）=====
+// nav_update（10ms）写，ctrl_update（5ms）读
+// Cortex-M7 对齐 float 单次赋值是原子操作，无需关中断
+static volatile float s_heading_err   = 0.0f;  // 偏航误差 (°)，正值=需向左转
+static volatile float s_speed_desired = 0.0f;  // 导航层期望速度（无斜坡）
 
 //=============================================================================
 // 将角度规范化到 (-180, 180]
@@ -53,7 +55,20 @@ static float point_distance(float x0, float y0, float x1, float y1)
 }
 
 //=============================================================================
-// 根据距离与转角计算自适应循迹速度
+// 从 (x0,y0) 到 (x1,y1) 的方位角（°），以初始航向为 0°，顺时针为正
+// 坐标系：Y 轴正方向 = initial_heading 方向（前进），X 轴正方向 = 右侧
+//=============================================================================
+static float point_bearing(float x0, float y0, float x1, float y1)
+{
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+    // atan2(dx, dy)：Y轴为前方（0°），顺时针为正
+    float bearing_rad = atan2f(dx, dy);
+    return bearing_rad * (180.0f / 3.14159265f);
+}
+
+//=============================================================================
+// 根据距离与转角计算自适应目标速度
 // 距离越近、转角越大，速度越低
 //=============================================================================
 static float tracker_calc_target_speed(float dist, float heading_err)
@@ -101,21 +116,6 @@ static float tracker_ramp_target_speed(float current_speed, float desired_speed)
 }
 
 //=============================================================================
-// 从 (x0,y0) 到 (x1,y1) 的方位角（°），以初始航向为 0°，顺时针为正
-// 坐标系：X 轴正方向 = initial_heading_deg 方向
-//=============================================================================
-static float point_bearing(float x0, float y0, float x1, float y1)
-{
-    float dx = x1 - x0;
-    float dy = y1 - y0;
-    // atan2f 返回弧度：dy/dx，其中 y 轴正方向对应 inav 坐标系的前方（初始航向）
-    // 转换为角度，X 轴为前方时用 atan2(dx, dy)
-    float bearing_rad = atan2f(dx, dy);
-    float bearing_deg = bearing_rad * (180.0f / 3.14159265f);
-    return bearing_deg;
-}
-
-//=============================================================================
 // 初始化
 //=============================================================================
 void ins_tracker_init(void)
@@ -132,20 +132,18 @@ void ins_tracker_init(void)
     inav_x                = 0.0f;
     inav_y                = 0.0f;
     turn_diff_ext         = 0;
+    s_heading_err         = 0.0f;
+    s_speed_desired       = INAV_TRACKER_MIN_SPEED;
 }
 
 //=============================================================================
 // 外部注入航点并启动循迹（由 UI 发车时调用）
-// px, py: 按行驶顺序排列的航点坐标数组
-// count:  航点总数（index 0 = 起点）
-// 调用前需确保 inav_x/y 已清零、inav_active 已开启、inav_heading_ref 已设定
 //=============================================================================
 void ins_tracker_start_with_points(const float *px, const float *py, uint8 count)
 {
     uint8 i;
     if(count < 2 || count > INAV_TRACKER_MAX_POINTS) return;
 
-    // 将外部航点拷贝到内部存储
     for(i = 0; i < count; i++)
     {
         recorded_x[i] = px[i];
@@ -153,13 +151,12 @@ void ins_tracker_start_with_points(const float *px, const float *py, uint8 count
     }
 
     tracker_point_count = count;
-    current_target_idx  = 1;            // 第一个目标是 index 1（跳过起点自身）
+    current_target_idx  = 1;
     initial_heading_deg = inav_heading_ref;
     tracker_state       = TRACKER_STATE_RUNNING;
     target_speed        = INAV_TRACKER_MIN_SPEED;
-
-    //wireless_printf("[INAV] ExtStart: %d pts, heading_ref=%.1f\r\n",
-    //                count, initial_heading_deg);
+    s_speed_desired     = INAV_TRACKER_MIN_SPEED;
+    s_heading_err       = 0.0f;
 }
 
 //=============================================================================
@@ -183,8 +180,6 @@ void ins_tracker_button_poll(void)
 
                     if(heading_lock_count < INAV_LOCK_HEADING_SAMPLES)
                     {
-                        //wireless_printf("[INAV] Lock heading... %d/%d yaw=%.1f\r\n",
-                         //               heading_lock_count, INAV_LOCK_HEADING_SAMPLES, quat_yaw_deg);
                         return;
                     }
 
@@ -193,7 +188,7 @@ void ins_tracker_button_poll(void)
                     inav_heading_ref       = initial_heading_deg;
                     inav_x                 = 0.0f;
                     inav_y                 = 0.0f;
-                    inav_active            = 1;  // 开始惯性导航积分
+                    inav_active            = 1;
 
                     recorded_x[0]          = 0.0f;
                     recorded_y[0]          = 0.0f;
@@ -201,25 +196,14 @@ void ins_tracker_button_poll(void)
                     heading_lock_count     = 0;
                     heading_lock_sum       = 0.0f;
                     led(toggle);
-                    //wireless_printf("[INAV] Point 0 (origin) locked. heading_ref=%.1f deg\r\n",
-                     //               initial_heading_deg);
                 }
                 else
                 {
-                    // 后续点：记录当前推算坐标
                     recorded_x[tracker_point_count] = inav_x;
                     recorded_y[tracker_point_count] = inav_y;
                     tracker_point_count++;
                     led(toggle);
-                    //wireless_printf("[INAV] Point %d recorded: x=%.2f y=%.2f\r\n",
-                     //               tracker_point_count - 1,
-                       //             recorded_x[tracker_point_count - 1],
-                 //                   recorded_y[tracker_point_count - 1]);
                 }
-            }
-            else if(tracker_point_count >= INAV_TRACKER_MAX_POINTS)
-            {
-                //wireless_printf("[INAV] Max points (%d) reached.\r\n", INAV_TRACKER_MAX_POINTS);
             }
         }
     }
@@ -238,12 +222,6 @@ void ins_tracker_button_poll(void)
         {
             if(tracker_state == TRACKER_STATE_IDLE && tracker_point_count >= 2)
             {
-                // 将起点（point 0）追加为最终目标，使小车回到起点
-                // 注意：point 0 始终是 (0,0)，即出发坐标
-                // 确保目标序列为: 1 → 2 → … → (count-1) → 0
-                // 我们不物理追加到数组，而是在 update 中特殊处理末尾
-
-                // 重置推算坐标，从起点出发
                 inav_x      = 0.0f;
                 inav_y      = 0.0f;
                 inav_active = 1;
@@ -251,13 +229,7 @@ void ins_tracker_button_poll(void)
                 current_target_idx = 1;
                 tracker_state      = TRACKER_STATE_RUNNING;
                 target_speed       = INAV_TRACKER_MIN_SPEED;
-
-                //wireless_printf("[INAV] Start tracking. Points=%d heading_ref=%.1f\r\n",
-                  //              tracker_point_count, initial_heading_deg);
-            }
-            else if(tracker_point_count < 2)
-            {
-                //wireless_printf("[INAV] Need at least 2 points (origin + 1).\r\n");
+                s_speed_desired    = INAV_TRACKER_MIN_SPEED;
             }
         }
     }
@@ -268,9 +240,115 @@ void ins_tracker_button_poll(void)
 }
 
 //=============================================================================
-// 循迹更新（在主循环中建议每 10~20ms 调用一次）
+// 导航外环（每 10ms 调用，含重浮点运算）
+// 负责：距离计算、目标方位角、前瞻航点切换、自适应速度计算
+// 结果写入 s_heading_err 和 s_speed_desired（volatile，供控制内环读取）
 //=============================================================================
-void ins_tracker_update(void)
+void ins_tracker_nav_update(void)
+{
+    if(tracker_state != TRACKER_STATE_RUNNING)
+    {
+        return;
+    }
+
+    if(current_target_idx >= tracker_point_count)
+    {
+        // 所有航点均已到达，循迹完成
+        tracker_state  = TRACKER_STATE_DONE;
+        target_speed   = 0.0f;
+        turn_diff_ext  = 0;
+        inav_active    = 0;
+        led(on);
+        return;
+    }
+
+    float cur_x = inav_x;
+    float cur_y = inav_y;
+    float target_x = recorded_x[current_target_idx];
+    float target_y = recorded_y[current_target_idx];
+
+    float dist = point_distance(cur_x, cur_y, target_x, target_y);
+
+    // ── 目标方位角与当前航向误差 ────────────────────────────────────────────
+    float bearing_local      = point_bearing(cur_x, cur_y, target_x, target_y);
+    float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
+    float heading_err         = normalize_angle(bearing_local - current_heading_rel);
+
+    // ── 航点切换判定（三重条件，任一满足即切换）────────────────────────────
+    uint8 do_switch = 0;
+
+    // 判定1：正常到达（dist < ARRIVE_DIST）
+    if(dist < INAV_TRACKER_ARRIVE_DIST)
+    {
+        do_switch = 1;
+    }
+
+    // 判定2：目标已在机身后方（防止超调后死追）
+    // 将目标→当前向量投影到当前航向，投影值为负则目标在身后
+    if(!do_switch)
+    {
+        // inav 坐标系：Y轴=initial_heading方向（前进），X轴=右侧
+        // 当前航向向量（单位向量）
+        float heading_rad = current_heading_rel * (3.14159265f / 180.0f);
+        float fwd_x = sinf(heading_rad);   // X分量（右向）
+        float fwd_y = cosf(heading_rad);   // Y分量（前向）
+        float dx = target_x - cur_x;
+        float dy = target_y - cur_y;
+        float dot = dx * fwd_x + dy * fwd_y;
+        if(dot < 0.0f)
+        {
+            do_switch = 1;  // 目标在身后，立即切换
+        }
+    }
+
+    // 判定3：前瞻切换（距离较近 且 偏角大，提前切换以形成流畅弧线）
+    if(!do_switch
+       && dist < INAV_TRACKER_LOOKAHEAD_DIST
+       && fabsf(heading_err) > INAV_TRACKER_LOOKAHEAD_ANG)
+    {
+        do_switch = 1;
+    }
+
+    // 执行切换
+    if(do_switch)
+    {
+        current_target_idx++;
+
+        if(current_target_idx >= tracker_point_count)
+        {
+            // 全部到达
+            tracker_state  = TRACKER_STATE_DONE;
+            target_speed   = 0.0f;
+            turn_diff_ext  = 0;
+            inav_active    = 0;
+            led(on);
+            return;
+        }
+
+        // 切换后立刻重算，避免等下一个 10ms 周期出现转向滞后
+        target_x = recorded_x[current_target_idx];
+        target_y = recorded_y[current_target_idx];
+        dist     = point_distance(cur_x, cur_y, target_x, target_y);
+        bearing_local = point_bearing(cur_x, cur_y, target_x, target_y);
+        heading_err   = normalize_angle(bearing_local - current_heading_rel);
+    }
+
+    // ── 写共享变量（volatile 原子写）────────────────────────────────────────
+    s_heading_err   = heading_err;
+    s_speed_desired = tracker_calc_target_speed(dist, heading_err);
+}
+
+//=============================================================================
+// 控制内环（每 5ms 调用，仅含乘加运算）
+// 负责：读取导航层计算结果，执行航向 PD 控制，输出 turn_diff_ext 和 target_speed
+// KD 项使用 imu660ra_gyro_z（陀螺仪原始信号，比 quat_yaw_rate_dps 差分更干净）
+//
+// ⚠ 符号约定：
+//   heading_err > 0  → 目标在左侧 → 需左转  → turn_diff_ext 应为正
+//   imu660ra_gyro_z > 0 → 机体正在左转（逆时针）→ 应产生右转阻尼（正 KD 减小 td）
+//   若上电测试时符号方向反，将 TRACKER_YAW_KD 改为负值即可
+//=============================================================================
+void ins_tracker_ctrl_update(void)
 {
     if(tracker_state != TRACKER_STATE_RUNNING)
     {
@@ -278,72 +356,26 @@ void ins_tracker_update(void)
         return;
     }
 
-    float cur_x = inav_x;
-    float cur_y = inav_y;
+    // 读导航层共享状态
+    float heading_err  = s_heading_err;
+    float speed_target = s_speed_desired;
 
-    // 确定当前目标坐标
-    // current_target_idx 范围：1 … tracker_point_count-1
-    // 所有航点（包括回起点和超程点）已由 UI 层注入，tracker 只需顺序访问
-    if(current_target_idx >= tracker_point_count)
-    {
-        // 所有航点均已到达，循迹完成
-        tracker_state = TRACKER_STATE_DONE;
-        target_speed  = 0.0f;
-        turn_diff_ext = 0;
-        inav_active   = 0;
-        led(on);
-        //wireless_printf("[INAV] All points done.\r\n");
-        return;
-    }
-
-    float target_x = recorded_x[current_target_idx];
-    float target_y = recorded_y[current_target_idx];
-
-    float dist = point_distance(cur_x, cur_y, target_x, target_y);
-
-    // 到达判定
-    if(dist < INAV_TRACKER_ARRIVE_DIST)
-    {
-        //wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
-
-        current_target_idx++;
-
-        // 检查是否所有航点均已到达
-        if(current_target_idx >= tracker_point_count)
-        {
-            tracker_state = TRACKER_STATE_DONE;
-            target_speed  = 0.0f;
-            turn_diff_ext = 0;
-            inav_active   = 0;
-            led(on);
-            //wireless_printf("[INAV] All points done.\r\n");
-            return;
-        }
-
-        // 更新目标
-        target_x = recorded_x[current_target_idx];
-        target_y = recorded_y[current_target_idx];
-        dist = point_distance(cur_x, cur_y, target_x, target_y);
-    }
-
-    // 目标方位角（相对于 initial_heading_deg 为 0° 的坐标系）
-    float bearing_local = point_bearing(cur_x, cur_y, target_x, target_y);
-
-    // 当前车头相对初始航向的偏差（°）
-    float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
-
-    // 偏航误差
-    float heading_err = normalize_angle(bearing_local - current_heading_rel);
-
-    // 按距离与转角自适应调速：离目标越近、转弯越大，速度越低
-    float desired_speed = tracker_calc_target_speed(dist, heading_err);
-    target_speed = tracker_ramp_target_speed(target_speed, desired_speed);
-
-    // PD 控制输出差速
-    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
+    // 航向 PD 控制
+    // imu660ra_gyro_z 为原始计数，imu660ra_gyro_transition() 将其转为 °/s
+    float gyro_z_dps = imu660ra_gyro_transition(imu660ra_gyro_z);
+    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * gyro_z_dps);
     turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
 
-    //wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
-     //               current_target_idx, dist, bearing_local, current_heading_rel,
-       //             heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
+    // 速度斜坡（在此处做，保证 target_speed 变化平滑）
+    target_speed = tracker_ramp_target_speed(target_speed, speed_target);
+}
+
+//=============================================================================
+// 兼容包装：顺序调用导航外环 + 控制内环
+// 适用于主循环或旧调用点（50ms 轮询）；推荐改为在 PIT 中分频调用两个子函数
+//=============================================================================
+void ins_tracker_update(void)
+{
+    ins_tracker_nav_update();
+    ins_tracker_ctrl_update();
 }
