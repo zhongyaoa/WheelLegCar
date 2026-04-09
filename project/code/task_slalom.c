@@ -201,22 +201,8 @@ void task_slalom_update(void)
             nav_yaw_output = heading_pid_calc(err);
             target_speed = SLALOM_FORWARD_SPEED;
 
-            // 每 200ms 打印一次（20ms 周期 × 10）
-            static uint8 straight_print_cnt = 0;
-            if (++straight_print_cnt >= 10)
-            {
-                straight_print_cnt = 0;
-                printf("STRAIGHT dist=%.2f tgt=%.1f hdg=%.1f err=%.1f out=%d | run=%d rol=%.1f spd=%d gps=%d\r\n",
-                       (float)dist_from_start,
-                       heading_target,
-                       nav_heading_angle,
-                       err,
-                       nav_yaw_output,
-                       run_state,
-                       roll_balance_cascade.posture_value.rol,
-                       car_speed,
-                       gnss.state);
-            }
+            printf("STRAIGHT dist=%.2f err=%.1f hdg=%.1f out=%d\r\n",
+                   (float)dist_from_start, err, nav_heading_angle, nav_yaw_output);
 
             if (dist_from_start >= SLALOM_STRAIGHT_DIST)
             {
@@ -268,14 +254,8 @@ void task_slalom_update(void)
                        turned, heading_target);
             }
 
-            // 每 100ms 打印一次
-            static uint8 uturn_print_cnt = 0;
-            if (++uturn_print_cnt >= 5)
-            {
-                uturn_print_cnt = 0;
-                printf("U_TURN turned=%.1f rem=%.1f out=%d run=%d\r\n",
-                       turned, remaining, nav_yaw_output, run_state);
-            }
+            printf("U_TURN turned=%.1f rem=%.1f out=%d\r\n",
+                   turned, remaining, nav_yaw_output);
             break;
         }
 
@@ -299,7 +279,7 @@ void task_slalom_update(void)
                     gnss.latitude, gnss.longitude,
                     origin_point.latitude, origin_point.longitude);
 
-                printf("TO_ORIGIN dist=%.2f err=%.1f run=%d\r\n", (float)dist_to_origin, err, run_state);
+                printf("TO_ORIGIN dist=%.2f err=%.1f\r\n", (float)dist_to_origin, err);
 
                 if (dist_to_origin <= SLALOM_CONE_ARRIVE_DIST * 2.0)
                 {
@@ -326,8 +306,8 @@ void task_slalom_update(void)
             nav_yaw_output = heading_pid_calc(err);
             target_speed = SLALOM_SLALOM_SPEED;
 
-            printf("CONE[%d] dist=%.2f err=%.1f hdg=%.1f out=%d run=%d\r\n",
-                   current_cone_idx, (float)dist_to_cone, err, nav_heading_angle, nav_yaw_output, run_state);
+            printf("CONE[%d] dist=%.2f err=%.1f hdg=%.1f out=%d\r\n",
+                   current_cone_idx, (float)dist_to_cone, err, nav_heading_angle, nav_yaw_output);
 
             if (dist_to_cone <= SLALOM_CONE_ARRIVE_DIST)
             {
