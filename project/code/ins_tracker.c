@@ -290,9 +290,9 @@ void ins_tracker_update(void)
         tracker_state = TRACKER_STATE_DONE;
         target_speed  = 0.0f;
         turn_diff_ext = 0;
+        yaw_target    = quat_yaw_deg;  // 对齐当前航向，停止后不再转
         inav_active   = 0;
         led(on);
-        //wireless_printf("[INAV] All points done.\r\n");
         return;
     }
 
@@ -304,8 +304,6 @@ void ins_tracker_update(void)
     // 到达判定
     if(dist < INAV_TRACKER_ARRIVE_DIST)
     {
-        //wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
-
         current_target_idx++;
 
         // 检查是否所有航点均已到达
@@ -314,9 +312,9 @@ void ins_tracker_update(void)
             tracker_state = TRACKER_STATE_DONE;
             target_speed  = 0.0f;
             turn_diff_ext = 0;
+            yaw_target    = quat_yaw_deg;  // 对齐当前航向，停止后不再转
             inav_active   = 0;
             led(on);
-            //wireless_printf("[INAV] All points done.\r\n");
             return;
         }
 
@@ -332,18 +330,20 @@ void ins_tracker_update(void)
     // 当前车头相对初始航向的偏差（°）
     float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
 
-    // 偏航误差
+    // 偏航误差（仅用于自适应调速）
     float heading_err = normalize_angle(bearing_local - current_heading_rel);
+
+    // 将循迹目标航向同步给偏航锁定 PD，由 car_motor_control 统一驱动转向
+    // 转换：bearing_local 是相对 initial_heading_deg 的，yaw_target 需要是绝对 quat yaw 值
+    yaw_target = normalize_angle(initial_heading_deg + bearing_local);
+    yaw_locked = 1;
+    turn_diff_ext = 0;  // 转向完全由偏航锁定 PD 驱动，不再单独叠加
 
     // 按距离与转角自适应调速：离目标越近、转弯越大，速度越低
     float desired_speed = tracker_calc_target_speed(dist, heading_err);
     target_speed = tracker_ramp_target_speed(target_speed, desired_speed);
 
-    // PD 控制输出差速
-    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
-    turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
-
-    //wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
-     //               current_target_idx, dist, bearing_local, current_heading_rel,
-       //             heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
+    //wireless_printf(\"[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f yaw_tgt=%.1f v=%.1f x=%.2f y=%.2f\\r\\n\",
+    //               current_target_idx, dist, bearing_local, current_heading_rel,
+    //               heading_err, yaw_target, target_speed, cur_x, cur_y);
 }

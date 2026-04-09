@@ -47,6 +47,10 @@ extern float imu_yaw_deg;
 extern float quat_yaw_deg;
 extern float quat_yaw_rate_dps;
 
+// 偏航锁定目标（°），循迹模块可写入以同步转向目标
+extern float yaw_target;
+extern uint8 yaw_locked;
+
 // 惯性导航推算位置（m），以 inav_heading_ref 方向为 X 轴正方向
 // inav_active = 1 时开始积分，由循迹模块控制
 extern float inav_x;
