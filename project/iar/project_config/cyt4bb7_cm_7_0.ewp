@@ -1122,6 +1122,12 @@
             <name>$PROJ_DIR$\..\..\code\balance_control.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\nav_heading.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\nav_heading.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\posture_control.c</name>
         </file>
         <file>
@@ -1138,6 +1144,18 @@
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\steer_control.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\task_slalom.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\task_slalom.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\ui.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\ui.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>

@@ -22,8 +22,8 @@
 //=============================================================================
 #define SLALOM_STRAIGHT_DIST        12.0        // 直行到掉头区距离（米）
 #define SLALOM_CONE_ARRIVE_DIST     0.8         // 到达目标点判定半径（米）
-#define SLALOM_FORWARD_SPEED        200.0f      // 直行目标速度（编码器单位）
-#define SLALOM_SLALOM_SPEED         150.0f      // 绕桩目标速度
+#define SLALOM_FORWARD_SPEED        600.0f      // 直行目标速度（编码器单位）
+#define SLALOM_SLALOM_SPEED         600.0f      // 绕桩目标速度
 #define SLALOM_UTURN_SPEED          100.0f      // 掉头速度（前进速度置0，纯差速）
 #define SLALOM_UTURN_ANGLE          175.0f      // 掉头完成角度差阈值（度）
 #define SLALOM_MAX_CONES            10          // 最大锥桶数量
