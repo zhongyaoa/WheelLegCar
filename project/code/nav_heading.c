@@ -41,9 +41,10 @@ void nav_heading_update_1ms(void)
     float gz_raw = (float)imu660ra_gyro_z - gyro_z_bias;
     float gz = (float)((int)(gz_raw / 10.0f)) * 10.0f;
 
-    // 单步角度变化量限幅：1ms 内最多转 3°（对应 3000°/s，远超正常机动）
-    // 防止陀螺仪瞬间跳变导致航向角突变
-    float delta_angle = gz / 16.384f * 0.001f;  // 单位：度
+    // imu660ra_gyro_z 负值=左转，正值=右转（见 CLAUDE.md）
+    // 左转时航向角应减小（北偏西），右转时增大（北偏东）
+    // 但实测左转时 nav_heading_angle 增大，说明需要取反
+    float delta_angle = -gz / 16.384f * 0.001f;  // 单位：度，取反使方向正确
     if (delta_angle >  3.0f) delta_angle =  3.0f;
     if (delta_angle < -3.0f) delta_angle = -3.0f;
 
