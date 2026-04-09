@@ -1,6 +1,7 @@
 #include "task_slalom.h"
 #include "nav_heading.h"
 #include "zf_device_gnss.h"
+#include "zf_device_wireless_uart.h"
 #include "balance_control.h"
 #include "posture_control.h"
 
@@ -86,7 +87,7 @@ void task_slalom_init(void)
     current_cone_idx  = 0;
     nav_yaw_output    = 0;
 
-    printf("SlalomTask: RECORD_MODE. A=record cone, B=finish.\r\n");
+    wireless_printf("SlalomTask: RECORD_MODE. A=record cone, B=finish.\r\n");
 }
 
 //=============================================================================
@@ -121,18 +122,18 @@ void task_slalom_update(void)
                     cone_gps[slalom_cone_count].latitude  = gnss.latitude;
                     cone_gps[slalom_cone_count].longitude = gnss.longitude;
                     slalom_cone_count++;
-                    printf("Cone[%d] lat=%.6f lon=%.6f\r\n",
+                    wireless_printf("Cone[%d] lat=%.6f lon=%.6f\r\n",
                            slalom_cone_count, gnss.latitude, gnss.longitude);
                 }
                 else
                 {
-                    printf("GPS invalid or max cones.\r\n");
+                    wireless_printf("GPS invalid or max cones.\r\n");
                 }
             }
             if (key_scan(KEY_B_PIN, &key_b_count))
             {
                 slalom_state = SLALOM_IDLE;
-                printf("SlalomTask: %d cones recorded. Press UP to start.\r\n", slalom_cone_count);
+                wireless_printf("SlalomTask: %d cones recorded. Press UP to start.\r\n", slalom_cone_count);
             }
             break;
         }
@@ -148,7 +149,7 @@ void task_slalom_update(void)
             if (key_scan(KEY_UP_PIN, &key_up_count))
             {
                 slalom_state = SLALOM_GPS_WAIT;
-                printf("SlalomTask: Waiting for GPS fix...\r\n");
+                wireless_printf("SlalomTask: Waiting for GPS fix...\r\n");
             }
             break;
         }
@@ -177,7 +178,7 @@ void task_slalom_update(void)
                 heading_target = nav_heading_angle;
 
                 slalom_state = SLALOM_STRAIGHT_GO;
-                printf("SlalomTask: Synced. heading=%.1f. STRAIGHT_GO.\r\n", heading_target);
+                wireless_printf("SlalomTask: Synced. heading=%.1f. STRAIGHT_GO.\r\n", heading_target);
             }
             else if (gnss.state == 1 && gnss.satellite_used >= 4)
             {
@@ -201,8 +202,16 @@ void task_slalom_update(void)
             nav_yaw_output = heading_pid_calc(err);
             target_speed = SLALOM_FORWARD_SPEED;
 
-            printf("STRAIGHT dist=%.2f err=%.1f hdg=%.1f out=%d\r\n",
-                   (float)dist_from_start, err, nav_heading_angle, nav_yaw_output);
+            // 每 200ms 打印一次（20ms 周期 × 10）
+            static uint8 straight_print_cnt = 0;
+            if (++straight_print_cnt >= 10)
+            {
+                straight_print_cnt = 0;
+                wireless_printf("STRAIGHT dist=%.2f tgt=%.1f hdg=%.1f err=%.1f out=%d | run=%d rol=%.1f spd=%d gps=%d\r\n",
+                       (float)dist_from_start, heading_target, nav_heading_angle,
+                       err, nav_yaw_output, run_state,
+                       roll_balance_cascade.posture_value.rol, car_speed, gnss.state);
+            }
 
             if (dist_from_start >= SLALOM_STRAIGHT_DIST)
             {
@@ -211,7 +220,7 @@ void task_slalom_update(void)
                 uturn_start_heading   = nav_heading_angle;
                 heading_err_last      = 0.0f;
                 slalom_state          = SLALOM_U_TURN;
-                printf("SlalomTask: Reached turnaround. U_TURN from heading=%.1f\r\n",
+                wireless_printf("SlalomTask: Reached turnaround. U_TURN from heading=%.1f\r\n",
                        uturn_start_heading);
             }
             break;
@@ -250,11 +259,11 @@ void task_slalom_update(void)
 
                 current_cone_idx = 0;
                 slalom_state     = SLALOM_RETURN;
-                printf("SlalomTask: U_TURN done. turned=%.1f. RETURN. tgt_hdg=%.1f\r\n",
+                wireless_printf("SlalomTask: U_TURN done. turned=%.1f. RETURN. tgt_hdg=%.1f\r\n",
                        turned, heading_target);
             }
 
-            printf("U_TURN turned=%.1f rem=%.1f out=%d\r\n",
+            wireless_printf("U_TURN turned=%.1f rem=%.1f out=%d\r\n",
                    turned, remaining, nav_yaw_output);
             break;
         }
@@ -279,14 +288,14 @@ void task_slalom_update(void)
                     gnss.latitude, gnss.longitude,
                     origin_point.latitude, origin_point.longitude);
 
-                printf("TO_ORIGIN dist=%.2f err=%.1f\r\n", (float)dist_to_origin, err);
+                wireless_printf("TO_ORIGIN dist=%.2f err=%.1f\r\n", (float)dist_to_origin, err);
 
                 if (dist_to_origin <= SLALOM_CONE_ARRIVE_DIST * 2.0)
                 {
                     target_speed   = 0;
                     nav_yaw_output = 0;
                     slalom_state   = SLALOM_STOP;
-                    printf("SlalomTask: Done! STOP.\r\n");
+                    wireless_printf("SlalomTask: Done! STOP.\r\n");
                 }
                 break;
             }
@@ -306,14 +315,14 @@ void task_slalom_update(void)
             nav_yaw_output = heading_pid_calc(err);
             target_speed = SLALOM_SLALOM_SPEED;
 
-            printf("CONE[%d] dist=%.2f err=%.1f hdg=%.1f out=%d\r\n",
+            wireless_printf("CONE[%d] dist=%.2f err=%.1f hdg=%.1f out=%d\r\n",
                    current_cone_idx, (float)dist_to_cone, err, nav_heading_angle, nav_yaw_output);
 
             if (dist_to_cone <= SLALOM_CONE_ARRIVE_DIST)
             {
                 heading_err_last = 0.0f;
                 current_cone_idx++;
-                printf("SlalomTask: Cone[%d] passed.\r\n", current_cone_idx - 1);
+                wireless_printf("SlalomTask: Cone[%d] passed.\r\n", current_cone_idx - 1);
             }
             break;
         }

@@ -52,6 +52,8 @@
 #include "zf_driver_uart.h"
 #include "zf_device_type.h"
 #include "zf_device_wireless_uart.h"
+#include <stdarg.h>
+#include <stdio.h>
 
 static  fifo_struct                                     wireless_uart_fifo;
 static  uint8                                           wireless_uart_buffer[WIRELESS_UART_BUFFER_SIZE];
@@ -217,8 +219,7 @@ void wireless_uart_callback (void)
 // 使用示例     wireless_uart_init();
 // 备注信息     
 //-------------------------------------------------------------------------------------------------------------------
-uint8 wireless_uart_init (void)
-{
+uint8 wireless_uart_init (void){
     uint8 return_state = 0;
     set_wireless_type(WIRELESS_UART, wireless_uart_callback);
 
@@ -275,4 +276,22 @@ uint8 wireless_uart_init (void)
     }while(0);
 #endif
     return return_state;
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+// 函数简介     无线转串口模块 格式化打印（类 printf 接口）
+// 参数说明     *format         格式化字符串
+// 参数说明     ...             可变参数
+// 返回参数     void
+// 使用示例     wireless_printf("dist=%.2f hdg=%.1f\r\n", dist, heading);
+// 备注信息     内部使用 256 字节栈缓冲区，单条日志不要超过 255 字符
+//-------------------------------------------------------------------------------------------------------------------
+void wireless_printf (const char *format, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buf, sizeof(buf), format, args);
+    va_end(args);
+    wireless_uart_send_string(buf);
 }
