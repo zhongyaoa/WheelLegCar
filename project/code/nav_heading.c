@@ -1,5 +1,6 @@
 #include "nav_heading.h"
 #include "zf_device_imu660ra.h"
+#include "zf_device_wireless_uart.h"
 
 // 对外航向角
 float nav_heading_angle = 0.0f;
@@ -26,7 +27,7 @@ void nav_heading_init(void)
     nav_heading_angle = 0.0f;
     heading_ready = 1;
 
-    printf("nav_heading: gyro_z_bias=%.2f\r\n", gyro_z_bias);
+    wireless_printf("nav_heading: gyro_z_bias=%.2f\r\n", gyro_z_bias);
 }
 
 //=============================================================================
@@ -40,12 +41,11 @@ void nav_heading_update_1ms(void)
     float gz_raw = (float)imu660ra_gyro_z - gyro_z_bias;
     float gz = (float)((int)(gz_raw / 10.0f)) * 10.0f;
 
-    // 注意：balance_control.h 定义 GYRO_DATA_Z = -imu660ra_gyro_z
-    // 即原始 gyro_z 正值 = 右转，对应航向角应增大（顺时针）
-    // 所以航向角增量 = -gz / 16.384 * 0.001
-    // （-是因为 imu660ra_gyro_z 右转为正，而我们用 -gyro_z 做平衡，
-    //   这里直接用原始 imu660ra_gyro_z，右转=正，对应方位角增大）
+    // 单步角度变化量限幅：1ms 内最多转 3°（对应 3000°/s，远超正常机动）
+    // 防止陀螺仪瞬间跳变导致航向角突变
     float delta_angle = gz / 16.384f * 0.001f;  // 单位：度
+    if (delta_angle >  3.0f) delta_angle =  3.0f;
+    if (delta_angle < -3.0f) delta_angle = -3.0f;
 
     nav_heading_angle += delta_angle;
 

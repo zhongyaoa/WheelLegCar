@@ -45,8 +45,9 @@ static int16 heading_pid_calc(float err)
 {
     float d_err = err - heading_err_last;
     heading_err_last = err;
-    // err > 0 → target is clockwise (right) from current → need right turn → nav_yaw_output negative
-    float output = -(SLALOM_HEADING_KP * err + SLALOM_HEADING_KD * d_err);
+    // err > 0 → current is CCW from target (target to the right) → need right turn → nav_yaw_output positive
+    // nav_yaw_output > 0 → left_duty -= out, right_duty += out → right wheel faster → right turn ✓
+    float output = SLALOM_HEADING_KP * err + SLALOM_HEADING_KD * d_err;
     return (int16)func_limit_ab(output, -SLALOM_HEADING_OUT_MAX, SLALOM_HEADING_OUT_MAX);
 }
 
