@@ -34,6 +34,7 @@
 #define SLALOM_HEADING_KP           40.0f       // 航向比例系数
 #define SLALOM_HEADING_KD           3.0f        // 航向微分系数
 #define SLALOM_HEADING_OUT_MAX      1500        // 航向输出限幅（叠加到差速）
+#define SLALOM_UTURN_KP             8.0f        // 掉头旋转比例系数（剩余角度→输出）
 
 //=============================================================================
 // 按键引脚
