@@ -46,9 +46,9 @@ static int16 heading_pid_calc(float err)
     float d_err = err - heading_err_last;
     heading_err_last = err;
     // err = target - current
-    // err > 0 → current 偏小 → 需要左转（航向角增大）→ nav_yaw_output 负值（左转）
-    // nav_yaw_output > 0 → 右转（right_duty 增大，left_duty 减小）
-    float output = -(SLALOM_HEADING_KP * err + SLALOM_HEADING_KD * d_err);
+    // err > 0 → hdg 偏小（偏右）→ 需要右转纠正 → nav_yaw_output 正值
+    // nav_yaw_output > 0 → left_duty+out（左快）, right_duty-out（右慢）→ 右转 ✓
+    float output = SLALOM_HEADING_KP * err + SLALOM_HEADING_KD * d_err;
     return (int16)func_limit_ab(output, -SLALOM_HEADING_OUT_MAX, SLALOM_HEADING_OUT_MAX);
 }
 

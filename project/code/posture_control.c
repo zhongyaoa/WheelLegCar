@@ -231,9 +231,9 @@ void car_motor_control(void)
         right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 右电机占空比: 取角速度环输出，限幅
 
         // yaw 阻尼（防偏转）+ 导航航向闭环叠加
-        // nav_yaw_output > 0 = 左转：左轮减速，右轮加速
-        left_motor_duty  = func_limit_ab(left_motor_duty  - imu660ra_gyro_z / 3 - nav_yaw_output, -turn_duty_max, turn_duty_max);
-        right_motor_duty = func_limit_ab(right_motor_duty + imu660ra_gyro_z / 3 + nav_yaw_output, -turn_duty_max, turn_duty_max);
+        // nav_yaw_output > 0 = 右转：右轮减速，左轮加速（经 -left 取反后左更快）
+        left_motor_duty  = func_limit_ab(left_motor_duty  - imu660ra_gyro_z / 3 + nav_yaw_output, -turn_duty_max, turn_duty_max);
+        right_motor_duty = func_limit_ab(right_motor_duty + imu660ra_gyro_z / 3 - nav_yaw_output, -turn_duty_max, turn_duty_max);
     }
     else                                               // 当运行状态为 0 时，电机关闭
     {
