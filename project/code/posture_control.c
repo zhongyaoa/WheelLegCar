@@ -11,15 +11,11 @@ int16 car_speed = 0;
 float target_speed = 0.0f;
 float car_distance = 0.0f;
 
-// 偏航锁定控制变量
-static float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
-static float yaw_target    = 0.0f;  // 偏航目标角 (°)
-static uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
 
 int16 left_motor_duty = 0;
 int16 right_motor_duty = 0;
 int16 balance_duty_max = 10000;
-int16 turn_duty_max = 300;
+int16 turn_duty_max = 3000;
 
 //=============================================================================
 // 函数简介     计算并更新车辆状态标志
@@ -34,7 +30,6 @@ void car_state_calculate(void)
     {
         jump_flag = 0;
         run_state = 0;                              // 停止运行
-        yaw_locked = 0;                             // 重置偏航锁定，下次立起来重新锁定方向
         roll_balance_cascade.angular_speed_cycle.i_value = 0;  // 重置角速度环 PID 积分值
         pitch_balance_cascade.angle_cycle.i_value = 0;
     }
@@ -196,8 +191,8 @@ void pit_call_back(void)
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
     {
-        car_speed = (motor_value.receive_left_speed_data - motor_value.receive_right_speed_data) / 2;  //向前走时left_motor_duty为负, right_motor_duty为正, 计算车辆速度：左右电机速度差的一半
-        //car_speed = (motor_value.receive_right_speed_data - motor_value.receive_left_speed_data) / 2;  // 计算车辆速度：左右电机速度差的一半
+        //car_speed = (motor_value.receive_left_speed_data - motor_value.receive_right_speed_data) / 2;  //向前走时left_motor_duty为负, right_motor_duty为正, 计算车辆速度：左右电机速度差的一半
+        car_speed = (motor_value.receive_right_speed_data - motor_value.receive_left_speed_data) / 2;  // 计算车辆速度：左右电机速度差的一半
         pid_control(&roll_balance_cascade.speed_cycle, target_speed, (float)car_speed);  // 速度环 PID 控制，目标值为 0.0 f
     }
 
@@ -226,33 +221,15 @@ void pit_call_back(void)
 //=============================================================================
 void car_motor_control(void)
 {
-    car_distance += ((float)car_speed / 60.0f * WHEEL_CIRCUMFERENCE * PI * 0.001f);
+    car_distance += ((float)car_speed / 60.0f * WHEEL_DIAMETER * PI * 0.001f);
 
     if(run_state)                                      // 当运行状态为 1 时，计算电机占空比
     {
         left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 左电机占空比: 取角速度环输出，限幅
         right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 右电机占空比: 取角速度环输出，限幅
 
-        // 偏航锁定：积分 gyro_z 得到相对偏航角，做 PD 闭环
-        // gyro_z 量程约 ±4000 LSB，转换系数 16.384 LSB/(°/s)，调用周期 0.001s
-        float gyro_z_dps = (float)imu660ra_gyro_z / 16.384f;   // 转换为 °/s
-        yaw_angle += gyro_z_dps * 0.001f;                       // 积分得到偏航角 (°)
-
-        if(!yaw_locked && run_state)
-        {
-            yaw_target = yaw_angle;                             // 启动时锁定当前偏航角为目标
-            yaw_locked = 1;
-        }
-
-        float yaw_error = yaw_target - yaw_angle;               // 偏航角误差 (°)
-        // P 项：角度误差纠偏；D 项：角速度阻尼（gyro_z_dps 已是微分）
-        float yaw_kp = 8.0f;                                    // 可调：偏航角度增益
-        float yaw_kd = 0.5f;                                    // 可调：偏航角速度阻尼
-        int16 turn_diff = (int16)(yaw_kp * yaw_error - yaw_kd * gyro_z_dps);
-        turn_diff = func_limit_ab(turn_diff, -turn_duty_max, turn_duty_max);
-
-        left_motor_duty  = func_limit_ab(left_motor_duty  + turn_diff, -balance_duty_max, balance_duty_max);
-        right_motor_duty = func_limit_ab(right_motor_duty - turn_diff, -balance_duty_max, balance_duty_max);
+        left_motor_duty  = func_limit_ab(left_motor_duty  - imu660ra_gyro_z / 3, -turn_duty_max, turn_duty_max);
+        right_motor_duty = func_limit_ab(right_motor_duty + imu660ra_gyro_z / 3, -turn_duty_max, turn_duty_max);
     }
     else                                               // 当运行状态为 0 时，电机关闭
     {

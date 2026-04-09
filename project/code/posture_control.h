@@ -13,7 +13,7 @@
 //#include "balance_control.h"
 //#include "steer_control.h"
 //#include "small_driver_uart_control.h"
-#define WHEEL_CIRCUMFERENCE 6.4f // 假设轮子直径为6.4cm
+#define WHEEL_DIAMETER 6.4f // 假设轮子直径为6.4cm
 
 // 车体运行状态变量
 extern uint32 sys_times;
