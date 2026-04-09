@@ -71,6 +71,8 @@ typedef struct
 extern slalom_state_enum    slalom_state;
 extern int16                nav_yaw_output;     // 导航航向差速叠加量（posture_control 中使用）
 extern uint8                slalom_cone_count;  // 已录入锥桶数量
+extern uint8                current_cone_idx;   // 当前目标锥桶索引（UI 读取）
+extern float                heading_target;     // 当前目标航向角（UI 读取）
 
 //=============================================================================
 // 接口函数

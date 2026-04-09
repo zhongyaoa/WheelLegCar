@@ -14,8 +14,8 @@ static gps_point_struct cone_gps[SLALOM_MAX_CONES];   // 锥桶 GPS 坐标表
 static gps_point_struct origin_point;                  // 起点坐标
 static gps_point_struct turnaround_point;              // 掉头区坐标（直行终点）
 
-static uint8        current_cone_idx    = 0;    // 当前目标锥桶索引
-static float        heading_target      = 0.0f; // 目标航向角（0~360，北为0，顺时针）
+uint8               current_cone_idx    = 0;    // 当前目标锥桶索引（UI 读取）
+float               heading_target      = 0.0f; // 目标航向角（UI 读取）
 static float        heading_err_last    = 0.0f; // 上次航向误差（用于微分）
 static float        uturn_start_yaw     = 0.0f; // 掉头开始时的 yaw
 
