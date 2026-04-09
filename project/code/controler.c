@@ -1,5 +1,6 @@
 #include "controler.h"
 #include "posture_control.h"
+#include "motion_manager.h"
 #include <string.h>
 #include <stdarg.h>
 
@@ -138,33 +139,35 @@ void air_printf(const char* fmt, ...)
 void my_wireless_optimizer(uint8 data)
 {
     if('w' == data)
-        {
-            target_speed = -50.0f;// 前进
-        }
-        else if('s' == data)
-        {
-            led(toggle);
-        }
-        else if('a' == data)
-        {
-            balance_enable = true;
-            run_state = true; // 启动控制
-        }
-        else if('d' == data)
-        {
-            run_state = false; // 停止控制
-            balance_enable = false;
-        }
-        else if('j' == data)
-        {
-            jump_flag = 1; // 增加机械偏置
-        }
-        else if('k' == data)
-        {
-            roll_balance_cascade.posture_value.mechanical_zero -= 1; // 减小机械偏置
-        }
-        else if('!' == data)
-        {
-            target_speed = 0.0f; 
-        }
+    {
+        motion_manager_set_balance_enable(1);
+        motion_manager_set_straight(-50.0f);
+    }
+    else if('s' == data)
+    {
+        led(toggle);
+    }
+    else if('a' == data)
+    {
+        motion_manager_set_balance_enable(1);
+        motion_manager_hold();
+        run_state = true; // 启动控制
+    }
+    else if('d' == data)
+    {
+        run_state = false; // 停止控制
+        motion_manager_emergency_stop();
+    }
+    else if('j' == data)
+    {
+        motion_manager_request_jump();
+    }
+    else if('k' == data)
+    {
+        roll_balance_cascade.posture_value.mechanical_zero -= 1; // 减小机械偏置
+    }
+    else if('!' == data)
+    {
+        motion_manager_hold();
+    }
 }

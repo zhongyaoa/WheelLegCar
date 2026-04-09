@@ -48,7 +48,7 @@ int main(void)
     clock_init(SYSTEM_CLOCK_250M);      // 时钟配置及系统初始化<务必保留>
     debug_init();                       // 调试串口信息初始化
     wireless_uart_init();
-    
+    motion_manager_init();              // 运动管理层初始化
 
     balance_cascade_init();             // 串级平衡控制初始化
     small_driver_uart_init();           // 小车控制串口初始化
@@ -84,8 +84,6 @@ int main(void)
 
         system_delay_ms(10);
     }
-        
-        
 }
 
 // **************************** 代码区域 ****************************

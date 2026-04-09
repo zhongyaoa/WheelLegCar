@@ -17,6 +17,7 @@
 #include "subject1_ui.h"
 #include "controler.h"
 #include "posture_control.h"
+#include "motion_manager.h"
 #include "ins_tracker.h"
 #include "zf_common_headfile.h"
 #include <math.h>
@@ -583,7 +584,7 @@ static void draw_running(void)
 
     ips200_set_color(COLOR_TEXT, COLOR_BG);
     ips200_show_string(8,  40, "Speed:");
-    ips200_show_float(70,  40, target_speed, 5, 1);
+    ips200_show_float(70,  40, motion_manager.linear_speed, 5, 1);
     ips200_show_string(8,  60, "X:");
     ips200_show_float(28,  60, inav_x, 4, 2);
     ips200_show_string(120, 60, "Y:");
@@ -639,6 +640,7 @@ static void reset_collect_data(void)
     inav_x      = 0.0f;
     inav_y      = 0.0f;
     inav_active = 0;
+    motion_manager_stop();
 }
 
 // 清空当前选中科目的数据（仅 S1 有实际数据），用于"重新采点"
@@ -763,6 +765,7 @@ static void poll_collect(void)
     {
         // 返回首页，数据保留（不清空）
         inav_active = 0;
+        motion_manager_stop();
         switch_state(UI_STATE_HOME);
     }
 }
@@ -785,7 +788,8 @@ static void poll_preview(void)
     if(btn_rising(LEFT, &btn_left_cnt))
     {
         // 启用平衡，小车开始自主站立
-        balance_enable = 1;
+        motion_manager_set_balance_enable(1);
+        motion_manager_hold();
         switch_state(UI_STATE_STANDBY);
     }
 
@@ -855,6 +859,8 @@ static void launch_subject1(void)
     inav_heading_ref = s1_collect_heading_ref;
 
     // 注入 ins_tracker 并启动
+    motion_manager_set_balance_enable(1);
+    motion_manager_hold();
     run_state = 1;
     ins_tracker_start_with_points(full_x, full_y, full_count);
 
@@ -881,7 +887,7 @@ static void poll_standby(void)
     if(btn_long_press(SW, &btn_sw_cnt, 20))
     {
         run_state      = 0;
-        balance_enable = 0;
+        motion_manager_emergency_stop();
         switch_state(UI_STATE_PREVIEW);
     }
 }
@@ -890,8 +896,7 @@ static void poll_running(void)
 {
     if(tracker_state == TRACKER_STATE_DONE)
     {
-        target_speed  = 0.0f;
-        turn_diff_ext = 0;
+        motion_manager_hold();
         inav_active   = 0;
         // balance_enable 保持为 1，car_state_calculate() 会自动恢复 run_state
         // 使小车完成后依然保持平衡
@@ -902,9 +907,7 @@ static void poll_running(void)
     if(btn_long_press(SW, &btn_sw_cnt, 10))
     {
         run_state     = 0;
-        balance_enable = 0;
-        target_speed  = 0.0f;
-        turn_diff_ext = 0;
+        motion_manager_emergency_stop();
         inav_active   = 0;
         tracker_state = TRACKER_STATE_DONE;
         switch_state(UI_STATE_DONE);
@@ -923,7 +926,8 @@ static void poll_done(void)
     // UP: 重跑（保留采点数据，直接进 STANDBY）
     if(btn_rising(UP, &btn_up_cnt))
     {
-        // balance_enable 已为 1（完成时未关闭），直接进预备等待发车
+        motion_manager_set_balance_enable(1);
+        motion_manager_hold();
         switch_state(UI_STATE_STANDBY);
     }
 
@@ -931,7 +935,7 @@ static void poll_done(void)
     if(btn_rising(SW, &btn_sw_cnt))
     {
         run_state      = 0;
-        balance_enable = 0;
+        motion_manager_emergency_stop();
         switch_state(UI_STATE_HOME);
     }
 }

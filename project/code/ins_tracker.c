@@ -1,5 +1,6 @@
 #include "ins_tracker.h"
 #include "posture_control.h"
+#include "motion_manager.h"
 #include "controler.h"
 #include "math.h"
 
@@ -14,10 +15,6 @@ static float recorded_y[INAV_TRACKER_MAX_POINTS];
 // 初始航向锁定滤波
 static uint8 heading_lock_count = 0;
 static float heading_lock_sum = 0.0f;
-
-// 初始航向锁定滤波
-//static uint8 heading_lock_count = 0;
-//static float heading_lock_sum = 0.0f;
 
 // 记录第一个点时锁定的初始航向角（°），后续回到此航向=0误差
 static float initial_heading_deg = 0.0f;
@@ -132,6 +129,7 @@ void ins_tracker_init(void)
     inav_x                = 0.0f;
     inav_y                = 0.0f;
     turn_diff_ext         = 0;
+    motion_manager_stop();
 }
 
 //=============================================================================
@@ -156,7 +154,7 @@ void ins_tracker_start_with_points(const float *px, const float *py, uint8 count
     current_target_idx  = 1;            // 第一个目标是 index 1（跳过起点自身）
     initial_heading_deg = inav_heading_ref;
     tracker_state       = TRACKER_STATE_RUNNING;
-    target_speed        = INAV_TRACKER_MIN_SPEED;
+    motion_manager_set_curve(INAV_TRACKER_MIN_SPEED, 0);
 
     //wireless_printf("[INAV] ExtStart: %d pts, heading_ref=%.1f\r\n",
     //                count, initial_heading_deg);
@@ -183,8 +181,6 @@ void ins_tracker_button_poll(void)
 
                     if(heading_lock_count < INAV_LOCK_HEADING_SAMPLES)
                     {
-                        //wireless_printf("[INAV] Lock heading... %d/%d yaw=%.1f\r\n",
-                         //               heading_lock_count, INAV_LOCK_HEADING_SAMPLES, quat_yaw_deg);
                         return;
                     }
 
@@ -201,8 +197,6 @@ void ins_tracker_button_poll(void)
                     heading_lock_count     = 0;
                     heading_lock_sum       = 0.0f;
                     led(toggle);
-                    //wireless_printf("[INAV] Point 0 (origin) locked. heading_ref=%.1f deg\r\n",
-                     //               initial_heading_deg);
                 }
                 else
                 {
@@ -211,15 +205,7 @@ void ins_tracker_button_poll(void)
                     recorded_y[tracker_point_count] = inav_y;
                     tracker_point_count++;
                     led(toggle);
-                    //wireless_printf("[INAV] Point %d recorded: x=%.2f y=%.2f\r\n",
-                     //               tracker_point_count - 1,
-                       //             recorded_x[tracker_point_count - 1],
-                 //                   recorded_y[tracker_point_count - 1]);
                 }
-            }
-            else if(tracker_point_count >= INAV_TRACKER_MAX_POINTS)
-            {
-                //wireless_printf("[INAV] Max points (%d) reached.\r\n", INAV_TRACKER_MAX_POINTS);
             }
         }
     }
@@ -238,26 +224,13 @@ void ins_tracker_button_poll(void)
         {
             if(tracker_state == TRACKER_STATE_IDLE && tracker_point_count >= 2)
             {
-                // 将起点（point 0）追加为最终目标，使小车回到起点
-                // 注意：point 0 始终是 (0,0)，即出发坐标
-                // 确保目标序列为: 1 → 2 → … → (count-1) → 0
-                // 我们不物理追加到数组，而是在 update 中特殊处理末尾
-
-                // 重置推算坐标，从起点出发
                 inav_x      = 0.0f;
                 inav_y      = 0.0f;
                 inav_active = 1;
 
                 current_target_idx = 1;
                 tracker_state      = TRACKER_STATE_RUNNING;
-                target_speed       = INAV_TRACKER_MIN_SPEED;
-
-                //wireless_printf("[INAV] Start tracking. Points=%d heading_ref=%.1f\r\n",
-                  //              tracker_point_count, initial_heading_deg);
-            }
-            else if(tracker_point_count < 2)
-            {
-                //wireless_printf("[INAV] Need at least 2 points (origin + 1).\r\n");
+                motion_manager_set_curve(INAV_TRACKER_MIN_SPEED, 0);
             }
         }
     }
@@ -274,25 +247,19 @@ void ins_tracker_update(void)
 {
     if(tracker_state != TRACKER_STATE_RUNNING)
     {
-        turn_diff_ext = 0;
+        motion_manager_stop();
         return;
     }
 
     float cur_x = inav_x;
     float cur_y = inav_y;
 
-    // 确定当前目标坐标
-    // current_target_idx 范围：1 … tracker_point_count-1
-    // 所有航点（包括回起点和超程点）已由 UI 层注入，tracker 只需顺序访问
     if(current_target_idx >= tracker_point_count)
     {
-        // 所有航点均已到达，循迹完成
         tracker_state = TRACKER_STATE_DONE;
-        target_speed  = 0.0f;
-        turn_diff_ext = 0;
+        motion_manager_stop();
         inav_active   = 0;
         led(on);
-        //wireless_printf("[INAV] All points done.\r\n");
         return;
     }
 
@@ -301,49 +268,31 @@ void ins_tracker_update(void)
 
     float dist = point_distance(cur_x, cur_y, target_x, target_y);
 
-    // 到达判定
     if(dist < INAV_TRACKER_ARRIVE_DIST)
     {
-        //wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
-
         current_target_idx++;
 
-        // 检查是否所有航点均已到达
         if(current_target_idx >= tracker_point_count)
         {
             tracker_state = TRACKER_STATE_DONE;
-            target_speed  = 0.0f;
-            turn_diff_ext = 0;
+            motion_manager_stop();
             inav_active   = 0;
             led(on);
-            //wireless_printf("[INAV] All points done.\r\n");
             return;
         }
 
-        // 更新目标
         target_x = recorded_x[current_target_idx];
         target_y = recorded_y[current_target_idx];
         dist = point_distance(cur_x, cur_y, target_x, target_y);
     }
 
-    // 目标方位角（相对于 initial_heading_deg 为 0° 的坐标系）
     float bearing_local = point_bearing(cur_x, cur_y, target_x, target_y);
-
-    // 当前车头相对初始航向的偏差（°）
     float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
-
-    // 偏航误差
     float heading_err = normalize_angle(bearing_local - current_heading_rel);
 
-    // 按距离与转角自适应调速：离目标越近、转弯越大，速度越低
     float desired_speed = tracker_calc_target_speed(dist, heading_err);
-    target_speed = tracker_ramp_target_speed(target_speed, desired_speed);
+    float next_speed = tracker_ramp_target_speed(motion_manager.linear_speed, desired_speed);
 
-    // PD 控制输出差速
     int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
-    turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
-
-    //wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
-     //               current_target_idx, dist, bearing_local, current_heading_rel,
-       //             heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
+    motion_manager_set_curve(next_speed, func_limit_ab(-td, -turn_duty_max, turn_duty_max));
 }

@@ -1,5 +1,6 @@
 #include "posture_control.h"
 #include "math.h"
+#include "motion_manager.h"
 
 uint32 sys_times = 0;
 uint8 system_time_state[20] = {0};
@@ -210,6 +211,8 @@ void pit_call_back(void)
     static uint8 yaw_init = 0;
     static float last_quat_yaw_deg = 0.0f;
     static float inav_speed_mps_filtered = 0.0f;
+
+    motion_manager_update();
 
     sys_times ++;                                      // 系统计时自增
 

@@ -1134,6 +1134,12 @@
             <name>$PROJ_DIR$\..\..\code\ins_tracker.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\motion_manager.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\motion_manager.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\posture_control.c</name>
         </file>
         <file>
