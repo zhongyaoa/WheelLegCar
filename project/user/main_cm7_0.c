@@ -37,6 +37,7 @@
 #include "controler.h"
 #include "ins_tracker.h"
 #include "subject1_ui.h"
+#include "balance_control.h"
 // 打开新的工程或者工程移动了位置务必执行以下操作
 // 第一步 关闭上面所有打开的文件
 // 第二步 project->clean  等待下方进度条走完
@@ -59,6 +60,21 @@ int main(void)
     led_init();                         // LED 初始化
     led(off);
     ins_tracker_init();                 // 惯性导航循迹模块初始化
+
+    // 开机静止校准 Z 轴陀螺仪零偏（500ms，需保持静止）
+    {
+        int32 sum = 0;
+        int16 i;
+        for(i = 0; i < 500; i++)
+        {
+            imu660ra_get_gyro();
+            sum += (-imu660ra_gyro_z);  // 与 GYRO_DATA_Z 宏定义一致（取反）
+            system_delay_ms(1);
+        }
+        gyro_z_bias = (float)sum / 500.0f;
+        wireless_printf("gyro_z_bias = %.2f LSB (%.4f dps)\r\n",
+                        gyro_z_bias, gyro_z_bias / 16.384f);
+    }
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
     subject1_ui_init();                 // 科目一 UI 初始化（含屏幕初始化）       

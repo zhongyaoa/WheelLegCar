@@ -7,6 +7,8 @@ cascade_value_struct roll_balance_cascade_resave;
 cascade_value_struct pitch_balance_cascade;
 cascade_value_struct pitch_balance_cascade_resave;
 
+float gyro_z_bias = 0.0f;  // Z 轴陀螺仪零偏（原始 LSB 单位），由开机静止校准写入
+
 
 /**
  * @brief 计算正切值的反正切 (近似计算)
@@ -104,9 +106,10 @@ void quaternion_module_calculate(cascade_value_struct *cascade_value)
     float x, y, z;                      //陀螺仪角速度(弧度/s)
 
     // 陀螺仪数据转换：原始数据->（°/s）-＞弧度/秒（先除以10再乘10做简单滤波）
+    // Z 轴额外减去开机校准的零偏，抑制偏航漂移
     x = (float)(GYRO_DATA_X / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
     y = (float)(GYRO_DATA_Y / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
-    z = (float)(GYRO_DATA_Z / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
+    z = (float)((GYRO_DATA_Z - (int16)gyro_z_bias) / 10 * 10) / GYRO_TRANSITION_FACTOR * 0.01745329f;
 
     // 加速度计数据转换：原始数据->g为单位（1g≈9.8m/s2）
     float ax_g = (float)ACC_DATA_X / ACC_TRANSITION_FACTOR;

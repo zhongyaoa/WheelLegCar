@@ -81,6 +81,8 @@ extern cascade_value_struct roll_balance_cascade_resave;
 extern cascade_value_struct pitch_balance_cascade;
 extern cascade_value_struct pitch_balance_cascade_resave;
 
+extern float gyro_z_bias;  // Z 轴陀螺仪零偏（原始 LSB 单位），由开机静止校准写入
+
 void quaternion_module_calculate (cascade_value_struct *cascade_value);
 
 void pid_control_incremental (pid_cycle_struct *pid_cycle, float target,float real);
