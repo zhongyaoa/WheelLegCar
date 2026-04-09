@@ -18,6 +18,7 @@ static float heading_lock_sum = 0.0f;
 
 // 记录第一个点时锁定的初始航向角（°），后续回到此航向=0误差
 static float initial_heading_deg = 0.0f;
+static float tracker_yaw_right_comp_deg = 0.0f;
 
 static uint8 current_target_idx = 1;
 
@@ -28,6 +29,11 @@ static uint32 btn_left_hold = 0;
 // 循迹 yaw PD 参数
 #define TRACKER_YAW_KP   8.0f   // 偏航角度增益 (duty/°)
 #define TRACKER_YAW_KD   0.5f   // 偏航角速度阻尼 (duty/(°/s))
+#define TRACKER_YAW_RIGHT_COMP_DT 0.01f   // 主循环更新周期约 10ms
+
+float tracker_yaw_right_comp_per_s = 5.0f;
+float tracker_yaw_right_comp_max_deg = 180.0f;
+float tracker_yaw_right_base_deg = 0.0f;
 
 //=============================================================================
 // 将角度规范化到 (-180, 180]
@@ -37,6 +43,20 @@ static float normalize_angle(float a)
     while(a >  180.0f) a -= 360.0f;
     while(a < -180.0f) a += 360.0f;
     return a;
+}
+
+float tracker_get_compensated_yaw_deg(float raw_yaw_deg, float heading_ref_deg, uint8 update_compensation)
+{
+    float heading_rel;
+
+    if(update_compensation)
+    {
+        tracker_yaw_right_comp_deg += tracker_yaw_right_comp_per_s * TRACKER_YAW_RIGHT_COMP_DT;
+        tracker_yaw_right_comp_deg = func_limit_ab(tracker_yaw_right_comp_deg, 0.0f, tracker_yaw_right_comp_max_deg);
+    }
+
+    heading_rel = normalize_angle(raw_yaw_deg - heading_ref_deg - tracker_yaw_right_base_deg - tracker_yaw_right_comp_deg);
+    return normalize_angle(heading_ref_deg + heading_rel);
 }
 
 //=============================================================================
@@ -123,6 +143,7 @@ void ins_tracker_init(void)
     btn_up_hold           = 0;
     btn_left_hold         = 0;
     initial_heading_deg   = 0.0f;
+    tracker_yaw_right_comp_deg = 0.0f;
     heading_lock_count    = 0;
     heading_lock_sum      = 0.0f;
     inav_active           = 0;
@@ -153,6 +174,7 @@ void ins_tracker_start_with_points(const float *px, const float *py, uint8 count
     tracker_point_count = count;
     current_target_idx  = 1;            // 第一个目标是 index 1（跳过起点自身）
     initial_heading_deg = inav_heading_ref;
+    tracker_yaw_right_comp_deg = 0.0f;
     tracker_state       = TRACKER_STATE_RUNNING;
     motion_manager_set_curve(INAV_TRACKER_MIN_SPEED, 0);
 
@@ -229,6 +251,7 @@ void ins_tracker_button_poll(void)
                 inav_active = 1;
 
                 current_target_idx = 1;
+                tracker_yaw_right_comp_deg = 0.0f;
                 tracker_state      = TRACKER_STATE_RUNNING;
                 motion_manager_set_curve(INAV_TRACKER_MIN_SPEED, 0);
             }
@@ -287,8 +310,13 @@ void ins_tracker_update(void)
     }
 
     float bearing_local = point_bearing(cur_x, cur_y, target_x, target_y);
-    float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
-    float heading_err = normalize_angle(bearing_local - current_heading_rel);
+    float compensated_yaw_deg;
+    float current_heading_rel;
+    float heading_err;
+
+    compensated_yaw_deg = tracker_get_compensated_yaw_deg(quat_yaw_deg, initial_heading_deg, 1);
+    current_heading_rel = normalize_angle(compensated_yaw_deg - initial_heading_deg);
+    heading_err = normalize_angle(bearing_local - current_heading_rel);
 
     float desired_speed = tracker_calc_target_speed(dist, heading_err);
     float next_speed = tracker_ramp_target_speed(motion_manager.linear_speed, desired_speed);

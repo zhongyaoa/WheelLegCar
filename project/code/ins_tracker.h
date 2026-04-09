@@ -20,6 +20,12 @@
 #define INAV_TRACKER_TURN_STOP_ANG     70.0f      // 转角接近该值时降到最低速度 (deg)
 #define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量
 
+extern float tracker_yaw_right_comp_per_s;   // 随时间向右补偿量 (deg/s)
+extern float tracker_yaw_right_comp_max_deg; // 向右补偿累计上限 (deg)
+extern float tracker_yaw_right_base_deg;     // 固定向右补偿基值 (deg)
+
+float tracker_get_compensated_yaw_deg(float raw_yaw_deg, float heading_ref_deg, uint8 update_compensation);
+
 typedef enum
 {
     TRACKER_STATE_IDLE      = 0,  // 空闲/记录点位阶段

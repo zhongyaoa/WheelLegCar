@@ -1,6 +1,7 @@
 #include "posture_control.h"
 #include "math.h"
 #include "motion_manager.h"
+#include "ins_tracker.h"
 
 uint32 sys_times = 0;
 uint8 system_time_state[20] = {0};
@@ -255,7 +256,8 @@ void pit_call_back(void)
         else
         {
             // 当前航向相对参考航向的偏差（rad）
-            float heading_rad = (quat_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
+            float compensated_yaw_deg = tracker_get_compensated_yaw_deg(quat_yaw_deg, inav_heading_ref, 0);
+            float heading_rad = (compensated_yaw_deg - inav_heading_ref) * (3.14159265f / 180.0f);
             // Y 轴 = 参考航向方向（前进），X 轴 = 参考航向右侧 90°
             inav_y += inav_speed_mps_filtered * cosf(heading_rad) * 0.001f;  // dt = 1ms
             inav_x += inav_speed_mps_filtered * sinf(heading_rad) * 0.001f;

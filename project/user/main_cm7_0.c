@@ -49,6 +49,9 @@ int main(void)
     debug_init();                       // 调试串口信息初始化
     wireless_uart_init();
     motion_manager_init();              // 运动管理层初始化
+    tracker_yaw_right_base_deg = 1.5f;      // 固定向右补偿，默认直接启用
+    tracker_yaw_right_comp_per_s = 0.10f;   // 每秒追加向右补偿角
+    tracker_yaw_right_comp_max_deg = 6.0f;  // 追加补偿最大值
 
     balance_cascade_init();             // 串级平衡控制初始化
     small_driver_uart_init();           // 小车控制串口初始化
