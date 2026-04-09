@@ -7,20 +7,21 @@
 
 推荐参考：
  - [逐飞科技CYT4BB7开源库](https://gitee.com/seekfree/CYT4BB7_Library/tree/master)
- - [逐飞平衡轮腿宣讲](https://www.bilibili.com/video/BV1RY9mYPE4n/?share_source=copy_web&vd_source=0077a6e04e8df0e5e00852cb5880c7e1)
+ - [逐飞平衡轮腿宣讲](https://www.bilibili.com/video/BV137Fzz5EkU/?p=2&share_source=copy_web&vd_source=0077a6e04e8df0e5e00852cb5880c7e1)
  - [逐飞摄像头图像处理](https://www.bilibili.com/video/BV1tC411H7K8/?share_source=copy_web&vd_source=0077a6e04e8df0e5e00852cb5880c7e1)
+ - [单车越野分析](https://mp.weixin.qq.com/s/BE-FIqRKL9eL0QS0miTBLA)
 ---
 
 ## 二、硬件平台
 
 * **主控芯片**：CYT4BB7
-* **电机类型**：无刷电机 舵机
-* **驱动方式**：UART PWM
+* **电机类型**：轮腿(V型)使用 无刷电机 舵机
 * **传感器**：
-  * IMU：660RA
-  * 摄像头：总钻风
-* **通信方式**：UART / SPI / I2C / WiFi / 蓝牙
-* **供电方式**：锂电池
+  * IMU660RA
+  * GPS模块tau1201
+* **人机交互**：
+  * 按键:UP=P10_4 | DOWN=P10_3 | LEFT=P10_2 | A=P09_0 | B=P08_3
+  * 屏幕模块: IPS200
 
 ### imu660ra数据与车辆运动关系
 
@@ -32,27 +33,7 @@
 
 ---
 
-## 三、软件架构说明
-
-代码基于逐飞开源CYT4BB7模板库，主要分为以下几层：
-
-```
-├── libraries/      # 系统、逐飞库
-    ├──sdk/             # 芯片官方开发库
-    ├──zf_common/       # 逐飞通用库
-    ├──zf_components/   # 逐飞助手
-    ├──zf_device/       # 逐飞外设驱动库
-    ├──zf_driver/       # 逐飞驱动
-├── project
-    ├──code/            # 用户代码放在这里(头文件记得在zf_common_headfile.h中声明)
-    ├──iar/             # iar工程文件
-    ├──test/            # 测试用
-    └──user/            # 程序入口、中断定义
-```
-
----
-
-## 四、比赛细则
+## 三、比赛细则
 ### 科目1：行进绕桩
   这个科目考察车模平台行进特性。 要求车模通过GPS、IMU或者其他导航方式， 在规定的场地内完成直行和绕桩科目。
 - 要求出发之后先直行到掉头区， 然后在返回的路径中通过锥桶给定的间隙。
