@@ -302,8 +302,24 @@ void car_motor_control(void)
     if(run_state)                                      // 当运行状态为 1 时，计算电机占空比
     {
         motor_stopped = 0;                            // 运行中，清除停止标记
-        left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 左电机占空比: 取角速度环输出，限幅
-        right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);  // 右电机占空比: 取角速度环输出，限幅
+
+        // 偏航锁定：立起来后记录当前 yaw 作为目标，行驶中用 PD 纠偏
+        if(!yaw_locked)
+        {
+            yaw_target = quat_yaw_deg;
+            yaw_locked = 1;
+        }
+        float yaw_err = normalize_angle(quat_yaw_deg - yaw_target);
+        // P=8：每偏1°补偿8 duty；D=0.3：用角速度阻尼抑制振荡
+        int16 yaw_td = (int16)(8.0f * yaw_err + 0.3f * quat_yaw_rate_dps);
+        yaw_td = func_limit_ab(yaw_td, -turn_duty_max, turn_duty_max);
+
+        left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);
+        right_motor_duty = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);
+
+        // 先叠加偏航锁定差速，再叠加外部循迹差速
+        left_motor_duty  = func_limit_ab(left_motor_duty  + yaw_td, -balance_duty_max, balance_duty_max);
+        right_motor_duty = func_limit_ab(right_motor_duty - yaw_td, -balance_duty_max, balance_duty_max);
 
         // 叠加外部差速（循迹转向注入）
         int16 td = func_limit_ab(turn_diff_ext, -turn_duty_max, turn_duty_max);
