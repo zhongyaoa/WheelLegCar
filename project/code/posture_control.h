@@ -39,4 +39,8 @@ void car_steer_control(void);
 void car_motor_control(void);
 void pit_call_back(void);
 
+// 导航航向差速叠加量（由 task_slalom 写入，car_motor_control 读取）
+// 正值 = 左转差速，负值 = 右转差速
+extern int16 nav_yaw_output;
+
 #endif
