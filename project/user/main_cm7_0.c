@@ -1,4 +1,4 @@
-#include "zf_common_headfile.h"
+﻿#include "zf_common_headfile.h"
 #include "task_slalom.h"
 #include "ui.h"
 
@@ -17,6 +17,7 @@ int main(void)
     ui_init();                          // 屏幕 UI 初始化
     task_slalom_init();                 // 科目一绕桩导航初始化（含 GPS 初始化）
     pit_ms_init(PIT_CH0, 1);
+    wireless_uart_init();
 
     // 此处编写用户代码 例如外设初始化代码等
     uint8 ui_tick = 0;
