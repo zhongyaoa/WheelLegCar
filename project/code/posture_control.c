@@ -15,9 +15,9 @@ float target_speed = 0.0f;
 float car_distance = 0.0f;
 
 // 偏航锁定控制变量
-static float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
-static float yaw_target    = 0.0f;  // 偏航目标角 (°)
-static uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
+float yaw_angle     = 0.0f;  // 积分得到的相对偏航角 (°)
+float yaw_target    = 0.0f;  // 偏航目标角 (°)
+uint8 yaw_locked    = 0;     // 偏航锁定已初始化标志
 
 // 外部差速注入（循迹模块写入，正值左转，负值右转）
 int16 turn_diff_ext = 0;
