@@ -22,23 +22,31 @@ int main(void)
     debug_init();                       // 调试串口信息初始化
     balance_cascade_init();
     imu660ra_init();
-    steer_control_init();   
+    steer_control_init();
 
     pit_ms_init(PIT_CH0, 1);           // 1ms 定时器，触发 pit_call_back
 
-    uint32 btn_poll_tick = 0;
+    uint32 sample_count = 0;
+    float gyro_x_sum = 0.0f;
+    float gyro_y_sum = 0.0f;
+    float gyro_z_sum = 0.0f;
+
     while(true)
     {
-
         system_delay_ms(10);
-        printf("%d,%d,%d,%d,%d,%d,%f\n", 
-            imu660ra_acc_x, imu660ra_acc_y, imu660ra_acc_z, 
-            imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z, 
-            roll_balance_cascade.posture_value.yaw);
-        //printf("%f\n", roll_balance_cascade.posture_value.yaw);
+
+        gyro_x_sum += (float)imu660ra_gyro_x;
+        gyro_y_sum += (float)imu660ra_gyro_y;
+        gyro_z_sum += (float)imu660ra_gyro_z;
+        sample_count ++;
+
+        printf("%d,%d,%d,%f,%f,%f,%f\n",
+               imu660ra_gyro_x, imu660ra_gyro_y, imu660ra_gyro_z,
+               gyro_x_sum / (float)sample_count,
+               gyro_y_sum / (float)sample_count,
+               gyro_z_sum / (float)sample_count,
+               roll_balance_cascade.posture_value.yaw);
     }
-        
-        
 }
 
 // **************************** 代码区域 ****************************
