@@ -118,8 +118,8 @@ void ui_update(void)
     ips200_set_color(C_VALUE, C_BG);
     ips200_show_float(COL(20), Y_GPS, gnss.speed, 3, 1);
 
-    ips200_show_float(COL(4),  Y_LAT, gnss.latitude,  3, 7);
-    ips200_show_float(COL(4),  Y_LON, gnss.longitude, 4, 7);
+    ips200_show_float(COL(4),  Y_LAT, gnss.latitude,  3, 6);
+    ips200_show_float(COL(4),  Y_LON, gnss.longitude, 4, 6);
 
     // 当前地面航向
     ips200_show_float(COL(4), Y_HEAD, gnss.direction, 5, 1);
