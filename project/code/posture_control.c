@@ -1,4 +1,5 @@
 #include "posture_control.h"
+#include "nav_heading.h"
 
 uint32 sys_times = 0;
 uint8 system_time_state[20] = {0};
@@ -188,6 +189,7 @@ void pit_call_back(void)
     imu660ra_get_gyro();                               // 获取 IMU660RA 陀螺仪数据
     imu660ra_get_acc();                                // 获取 IMU660RA 加速度计数据
     quaternion_module_calculate(&roll_balance_cascade); // 计算四元数，更新姿态数据
+    nav_heading_update_1ms();                          // 导航航向角积分（gyro_z）
 
     if(sys_times % 20 == 0)                            // 每 20 个周期执行一次（约 20 * 中断周期）
     {
