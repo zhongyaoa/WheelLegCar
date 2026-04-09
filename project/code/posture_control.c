@@ -311,8 +311,8 @@ void car_motor_control(void)
             yaw_locked = 1;
         }
         float yaw_err = normalize_angle(quat_yaw_deg - yaw_target);
-        // P=8：每偏1°补偿8 duty；D=0.3：角速度阻尼
-        int16 yaw_td = (int16)(8.0f * yaw_err + 0.3f * quat_yaw_rate_dps);
+        // P=8：每偏1°补偿8 duty；D项阻尼（符号取负，角速度与纠偏方向相同时减力）
+        int16 yaw_td = (int16)(8.0f * yaw_err - 0.02f * quat_yaw_rate_dps);
         yaw_td = func_limit_ab(yaw_td, -turn_duty_max, turn_duty_max);
 
         left_motor_duty  = func_limit_ab((int16)roll_balance_cascade.angular_speed_cycle.out, -balance_duty_max, balance_duty_max);
