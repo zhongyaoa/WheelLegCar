@@ -14,6 +14,20 @@
 #define CONE_BYPASS_DIST   0.35f
 #define OVERMEASURE        0.1f
 
+// Flash 存储布局 (Section 0, Page 0)
+// [0]        : 魔数 0x53314F4B，用于判断数据是否有效
+// [1]        : collect_heading_ref (float)
+// [2]        : waypoint_count (uint8)
+// [3]        : has_start (uint8)
+// [4]        : has_turn (uint8)
+// [5+i*3+0]  : points[i].x (float)
+// [5+i*3+1]  : points[i].y (float)
+// [5+i*3+2]  : points[i].type (uint8)
+#define S1_FLASH_SECTION    (0)
+#define S1_FLASH_PAGE       (0)
+#define S1_FLASH_MAGIC      (0x53314F4Bu)
+#define S1_FLASH_HDR_LEN    (5)
+
 ui_state_enum           s1_ui_state      = UI_STATE_HOME;
 subject1_task_data_t    s1_task_data     = {{0}, 0, 0, 0, POINT_TYPE_START, 0, 0.0f};
 subject1_preview_data_t s1_preview_data;
@@ -82,6 +96,8 @@ static void clear_selected_subject_data(void)
     if(selected_subject == 0)
     {
         reset_collect_data();
+        if(flash_check(S1_FLASH_SECTION, S1_FLASH_PAGE))
+            flash_erase_page(S1_FLASH_SECTION, S1_FLASH_PAGE);
     }
 }
 
@@ -117,6 +133,7 @@ static uint8 subject1_add_current_point(void)
 
     s1_task_data.waypoint_count++;
     led(toggle);
+    subject1_save_to_flash();
     return 1;
 }
 
@@ -131,6 +148,7 @@ static uint8 subject1_delete_last_point(void)
     if(removed->type == POINT_TYPE_START) s1_task_data.has_start = 0;
     if(removed->type == POINT_TYPE_TURN)  s1_task_data.has_turn  = 0;
     memset(removed, 0, sizeof(*removed));
+    subject1_save_to_flash();
     return 1;
 }
 
@@ -277,11 +295,74 @@ static void subject1_launch(void)
     switch_state(UI_STATE_RUNNING);
 }
 
+static void subject1_save_to_flash(void)
+{
+    uint8 i;
+    uint32 total = S1_FLASH_HDR_LEN + (uint32)s1_task_data.waypoint_count * 3;
+
+    flash_buffer_clear();
+    flash_union_buffer[0].uint32_type           = S1_FLASH_MAGIC;
+    flash_union_buffer[1].float_type            = s1_task_data.collect_heading_ref;
+    flash_union_buffer[2].uint8_type            = s1_task_data.waypoint_count;
+    flash_union_buffer[3].uint8_type            = s1_task_data.has_start;
+    flash_union_buffer[4].uint8_type            = s1_task_data.has_turn;
+
+    for(i = 0; i < s1_task_data.waypoint_count; i++)
+    {
+        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 0].float_type  = s1_task_data.points[i].x;
+        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 1].float_type  = s1_task_data.points[i].y;
+        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type  = (uint8)s1_task_data.points[i].type;
+    }
+
+    if(flash_check(S1_FLASH_SECTION, S1_FLASH_PAGE))
+        flash_erase_page(S1_FLASH_SECTION, S1_FLASH_PAGE);
+    flash_write_page_from_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, total);
+}
+
+static uint8 subject1_load_from_flash(void)
+{
+    uint8 i;
+    uint8 wpc;
+    uint32 total;
+
+    flash_read_page_to_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, S1_FLASH_HDR_LEN);
+
+    if(flash_union_buffer[0].uint32_type != S1_FLASH_MAGIC)
+        return 0;
+
+    wpc = flash_union_buffer[2].uint8_type;
+    if(wpc > S1_MAX_WAYPOINTS)
+        return 0;
+
+    total = S1_FLASH_HDR_LEN + (uint32)wpc * 3;
+    flash_read_page_to_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, total);
+
+    memset(&s1_task_data, 0, sizeof(s1_task_data));
+    s1_task_data.collect_heading_ref  = flash_union_buffer[1].float_type;
+    s1_task_data.waypoint_count       = wpc;
+    s1_task_data.has_start            = flash_union_buffer[3].uint8_type;
+    s1_task_data.has_turn             = flash_union_buffer[4].uint8_type;
+    s1_task_data.current_point_type   = POINT_TYPE_START;
+
+    for(i = 0; i < wpc; i++)
+    {
+        s1_task_data.points[i].x    = flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 0].float_type;
+        s1_task_data.points[i].y    = flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 1].float_type;
+        s1_task_data.points[i].type = (point_type_enum)flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type;
+    }
+
+    return 1;
+}
+
 void subject1_init(void)
 {
     s1_ui_state = UI_STATE_HOME;
     s1_screen_dirty = 1;
-    reset_collect_data();
+
+    if(!subject1_load_from_flash())
+    {
+        reset_collect_data();
+    }
 }
 
 void subject1_poll(void)

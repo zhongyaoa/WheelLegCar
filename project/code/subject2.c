@@ -10,6 +10,21 @@
 #include <math.h>
 #include <string.h>
 
+// Flash 存储布局 (Section 0, Page 1)
+// [0]        : 魔数 0x53324F4B，用于判断数据是否有效
+// [1]        : collect_heading_ref (float)
+// [2]        : point_count (uint8)
+// [3]        : mine_count (uint8)
+// [4]        : has_start (uint8)
+// [5]        : has_turnback (uint8)
+// [6+i*3+0]  : points[i].x (float)
+// [6+i*3+1]  : points[i].y (float)
+// [6+i*3+2]  : points[i].type (uint8)
+#define S2_FLASH_SECTION    (0)
+#define S2_FLASH_PAGE       (1)
+#define S2_FLASH_MAGIC      (0x53324F4Bu)
+#define S2_FLASH_HDR_LEN    (6)
+
 ui_state_enum        s2_ui_state   = UI_STATE_HOME;
 subject2_task_data_t s2_task_data  = {{0}, 0, 0, 0, 0, S2_POINT_START, 0.0f};
 subject2_phase_enum  s2_phase      = S2_PHASE_IDLE;
@@ -162,6 +177,67 @@ static void switch_state(ui_state_enum new_state)
     s2_screen_dirty = 1;
 }
 
+static void subject2_save_to_flash(void)
+{
+    uint8 i;
+    uint32 total = S2_FLASH_HDR_LEN + (uint32)s2_task_data.point_count * 3;
+
+    flash_buffer_clear();
+    flash_union_buffer[0].uint32_type  = S2_FLASH_MAGIC;
+    flash_union_buffer[1].float_type   = s2_task_data.collect_heading_ref;
+    flash_union_buffer[2].uint8_type   = s2_task_data.point_count;
+    flash_union_buffer[3].uint8_type   = s2_task_data.mine_count;
+    flash_union_buffer[4].uint8_type   = s2_task_data.has_start;
+    flash_union_buffer[5].uint8_type   = s2_task_data.has_turnback;
+
+    for(i = 0; i < s2_task_data.point_count; i++)
+    {
+        flash_union_buffer[S2_FLASH_HDR_LEN + i * 3 + 0].float_type  = s2_task_data.points[i].x;
+        flash_union_buffer[S2_FLASH_HDR_LEN + i * 3 + 1].float_type  = s2_task_data.points[i].y;
+        flash_union_buffer[S2_FLASH_HDR_LEN + i * 3 + 2].uint8_type  = (uint8)s2_task_data.points[i].type;
+    }
+
+    if(flash_check(S2_FLASH_SECTION, S2_FLASH_PAGE))
+        flash_erase_page(S2_FLASH_SECTION, S2_FLASH_PAGE);
+    flash_write_page_from_buffer(S2_FLASH_SECTION, S2_FLASH_PAGE, total);
+}
+
+static uint8 subject2_load_from_flash(void)
+{
+    uint8 i;
+    uint8 pc;
+    uint32 total;
+
+    flash_read_page_to_buffer(S2_FLASH_SECTION, S2_FLASH_PAGE, S2_FLASH_HDR_LEN);
+
+    if(flash_union_buffer[0].uint32_type != S2_FLASH_MAGIC)
+        return 0;
+
+    pc = flash_union_buffer[2].uint8_type;
+    if(pc > S2_MAX_ROUTE_POINTS)
+        return 0;
+
+    total = S2_FLASH_HDR_LEN + (uint32)pc * 3;
+    flash_read_page_to_buffer(S2_FLASH_SECTION, S2_FLASH_PAGE, total);
+
+    memset(&s2_task_data, 0, sizeof(s2_task_data));
+    s2_task_data.collect_heading_ref  = flash_union_buffer[1].float_type;
+    s2_task_data.point_count          = pc;
+    s2_task_data.mine_count           = flash_union_buffer[3].uint8_type;
+    s2_task_data.has_start            = flash_union_buffer[4].uint8_type;
+    s2_task_data.has_turnback         = flash_union_buffer[5].uint8_type;
+    s2_task_data.current_point_type   = S2_POINT_START;
+
+    for(i = 0; i < pc; i++)
+    {
+        s2_task_data.points[i].x    = flash_union_buffer[S2_FLASH_HDR_LEN + i * 3 + 0].float_type;
+        s2_task_data.points[i].y    = flash_union_buffer[S2_FLASH_HDR_LEN + i * 3 + 1].float_type;
+        s2_task_data.points[i].type = (subject2_point_type_enum)flash_union_buffer[S2_FLASH_HDR_LEN + i * 3 + 2].uint8_type;
+    }
+
+    return 1;
+}
+
 static void subject2_reset_data(void)
 {
     memset(&s2_task_data, 0, sizeof(s2_task_data));
@@ -215,6 +291,7 @@ static uint8 subject2_add_current_point(void)
 
     s2_task_data.point_count++;
     led(toggle);
+    subject2_save_to_flash();
     return 1;
 }
 
@@ -232,6 +309,7 @@ static uint8 subject2_delete_last_point(void)
     else if(removed->type == S2_POINT_TURNBACK) s2_task_data.has_turnback = 0;
 
     memset(removed, 0, sizeof(*removed));
+    subject2_save_to_flash();
     return 1;
 }
 
@@ -270,7 +348,26 @@ void subject2_init(void)
 {
     s2_ui_state = UI_STATE_HOME;
     s2_screen_dirty = 1;
-    subject2_reset_data();
+
+    if(!subject2_load_from_flash())
+    {
+        subject2_reset_data();
+    }
+    else
+    {
+        s2_phase = S2_PHASE_IDLE;
+        s2_current_target_idx = 0;
+        s2_current_mine_idx = 0;
+        s2_spin_dir = 1;
+        s2_spin_lap_count = 0;
+        s2_spin_target_yaw = 0.0f;
+        s2_spin_accum_deg = 0.0f;
+        s2_yaw_bias_deg = 0.0f;
+        inav_x = 0.0f;
+        inav_y = 0.0f;
+        inav_active = 0;
+        target_speed = 0.0f;
+    }
 }
 
 void subject2_poll(void)
@@ -340,6 +437,8 @@ void subject2_poll(void)
         if(s2_ui_state == UI_STATE_HOME && selected_subject == 1)
         {
             subject2_reset_data();
+            if(flash_check(S2_FLASH_SECTION, S2_FLASH_PAGE))
+                flash_erase_page(S2_FLASH_SECTION, S2_FLASH_PAGE);
             switch_state(UI_STATE_COLLECT);
         }
     }
