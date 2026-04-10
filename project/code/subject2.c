@@ -126,6 +126,23 @@ void subject_home_poll(void)
         }
         competition_ui_redraw();
     }
+
+    if(btn_long_press(SE, &btn_se_cnt, 20))
+    {
+        if(selected_subject == 0)
+        {
+            subject1_clear_and_recollect();
+            competition_ui_redraw();
+        }
+        else if(selected_subject == 1)
+        {
+            subject2_reset_data();
+            if(flash_check(S2_FLASH_SECTION, S2_FLASH_PAGE))
+                flash_erase_page(S2_FLASH_SECTION, S2_FLASH_PAGE);
+            switch_state(UI_STATE_COLLECT);
+            competition_ui_redraw();
+        }
+    }
 }
 
 static float normalize_angle(float a)
@@ -429,17 +446,6 @@ void subject2_poll(void)
             run_state = 0;
             balance_enable = 0;
             switch_state(UI_STATE_HOME);
-        }
-    }
-
-    if(btn_long_press(SE, &btn_se_cnt, 20))
-    {
-        if(s2_ui_state == UI_STATE_HOME && selected_subject == 1)
-        {
-            subject2_reset_data();
-            if(flash_check(S2_FLASH_SECTION, S2_FLASH_PAGE))
-                flash_erase_page(S2_FLASH_SECTION, S2_FLASH_PAGE);
-            switch_state(UI_STATE_COLLECT);
         }
     }
 

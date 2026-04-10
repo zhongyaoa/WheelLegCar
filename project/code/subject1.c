@@ -354,6 +354,15 @@ static void subject1_launch(void)
     switch_state(UI_STATE_RUNNING);
 }
 
+void subject1_clear_and_recollect(void)
+{
+    reset_collect_data();
+    if(flash_check(S1_FLASH_SECTION, S1_FLASH_PAGE))
+        flash_erase_page(S1_FLASH_SECTION, S1_FLASH_PAGE);
+    s1_ui_state     = UI_STATE_COLLECT;
+    s1_screen_dirty = 1;
+}
+
 void subject1_init(void)
 {
     s1_ui_state = UI_STATE_HOME;
@@ -462,15 +471,6 @@ void subject1_poll(void)
             run_state      = 0;
             balance_enable = 0;
             switch_state(UI_STATE_HOME);
-        }
-    }
-
-    if(btn_long_press(SE, &btn_se_cnt, 20))
-    {
-        if(s1_ui_state == UI_STATE_HOME && selected_subject == 0)
-        {
-            clear_selected_subject_data();
-            switch_state(UI_STATE_COLLECT);
         }
     }
 
