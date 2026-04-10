@@ -11,7 +11,7 @@
 #include <math.h>
 #include <string.h>
 
-#define CONE_BYPASS_DIST   0.35f
+#define CONE_BYPASS_DIST   0.25f
 #define OVERMEASURE        0.1f
 
 // Flash 存储布局 (Section 0, Page 0)

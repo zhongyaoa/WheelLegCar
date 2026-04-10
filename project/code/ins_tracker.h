@@ -13,9 +13,9 @@
 
 #define INAV_TRACKER_MAX_POINTS        40         // 最多记录点位数（含起点，需容纳去程+回程）
 #define INAV_TRACKER_ARRIVE_DIST       0.1f       // 到达判定距离 (m)
-#define INAV_TRACKER_CRUISE_SPEED      (600.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
+#define INAV_TRACKER_CRUISE_SPEED      (1000.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
 #define INAV_TRACKER_MIN_SPEED         (200.0f)  // 最低循迹速度，避免转向时完全没速度
-#define INAV_TRACKER_SLOWDOWN_DIST     1.0f       // 距离小于该值时开始按距离降速 (m)
+#define INAV_TRACKER_SLOWDOWN_DIST     2.0f       // 距离小于该值时开始按距离降速 (m)
 #define INAV_TRACKER_TURN_SLOWDOWN_ANG 25.0f      // 转角大于该值时开始按角度降速 (deg)
 #define INAV_TRACKER_TURN_STOP_ANG     70.0f      // 转角接近该值时降到最低速度 (deg)
 #define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量

@@ -29,8 +29,8 @@ static uint32 btn_up_hold   = 0;
 static uint32 btn_left_hold = 0;
 
 // 循迹 yaw PD 参数
-#define TRACKER_YAW_KP   8.0f   // 偏航角度增益 (duty/°)
-#define TRACKER_YAW_KD   0.5f   // 偏航角速度阻尼 (duty/(°/s))
+#define TRACKER_YAW_KP   5.0f   // 偏航角度增益 (duty/°)//原8.0
+#define TRACKER_YAW_KD   1.0f   // 偏航角速度阻尼 (duty/(°/s))//原0.5
 
 //=============================================================================
 // 将角度规范化到 (-180, 180]
