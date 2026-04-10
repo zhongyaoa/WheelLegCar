@@ -336,12 +336,22 @@ void ins_tracker_update(void)
 
     // Look-ahead：接近当前航点且存在下一航点时，瞄准下一航点方向
     // 避免距离很近时 bearing 剧烈翻转导致的抖动转向
+    // 仅当当前→下一航点的方向与车头方向夹角较小（< 90°）时启用，
+    // 避免在需要大角度转弯的航点（如调头点）提前瞄向反方向导致振荡
     float aim_x = target_x;
     float aim_y = target_y;
     if(dist < INAV_TRACKER_LOOKAHEAD_DIST && (current_target_idx + 1) < tracker_point_count)
     {
-        aim_x = recorded_x[current_target_idx + 1];
-        aim_y = recorded_y[current_target_idx + 1];
+        float next_x = recorded_x[current_target_idx + 1];
+        float next_y = recorded_y[current_target_idx + 1];
+        float bear_to_next = point_bearing(cur_x, cur_y, next_x, next_y);
+        float cur_hdg = normalize_angle(quat_yaw_deg - initial_heading_deg);
+        float angle_to_next = fabsf(normalize_angle(bear_to_next - cur_hdg));
+        if(angle_to_next < 90.0f)
+        {
+            aim_x = next_x;
+            aim_y = next_y;
+        }
     }
 
     // 目标方位角（相对于 initial_heading_deg 为 0° 的坐标系）
