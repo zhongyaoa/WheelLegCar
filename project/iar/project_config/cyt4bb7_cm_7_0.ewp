@@ -1158,10 +1158,10 @@
             <name>$PROJ_DIR$\..\..\code\subject1.h</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\code\subject1_ui.c</name>
+            <name>$PROJ_DIR$\..\..\code\UI.c</name>
         </file>
         <file>
-            <name>$PROJ_DIR$\..\..\code\subject1_ui.h</name>
+            <name>$PROJ_DIR$\..\..\code\UI.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\..\..\code\本文件夹作用.txt</name>
