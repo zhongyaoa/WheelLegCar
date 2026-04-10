@@ -1152,6 +1152,12 @@
             <name>$PROJ_DIR$\..\..\code\steer_control.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\subject1.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\subject1.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\subject1_ui.c</name>
         </file>
         <file>
