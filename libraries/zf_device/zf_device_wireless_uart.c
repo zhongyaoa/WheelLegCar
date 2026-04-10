@@ -172,35 +172,6 @@ uint32 wireless_uart_send_string (const char *str)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-// 函数简介     无线转串口模块 格式化打印
-// 参数说明     *fmt            格式化字符串
-// 返回参数     void
-// 使用示例     wireless_printf("val=%d\r\n", value);
-// 备注信息     格式化后通过无线串口发送
-//-------------------------------------------------------------------------------------------------------------------
-void wireless_printf (const char *fmt, ...)
-{
-    zf_assert(NULL != fmt);
-
-    static uint8 wireless_printf_buffer[256] = {0};
-    int32 str_length = 0;
-    va_list arg;
-
-    va_start(arg, fmt);
-    str_length = vsnprintf((char *)wireless_printf_buffer, sizeof(wireless_printf_buffer) - 1, fmt, arg);
-    va_end(arg);
-
-    if(str_length > 0)
-    {
-        if((uint32)str_length > sizeof(wireless_printf_buffer) - 1)
-        {
-            str_length = sizeof(wireless_printf_buffer) - 1;
-        }
-        wireless_uart_send_buffer(wireless_printf_buffer, (uint32)str_length);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------------------------
 // 函数简介     无线转串口模块 读取缓冲
 // 参数说明     *buff           接收缓冲区
 // 参数说明     len             读取数据长度
@@ -230,7 +201,6 @@ void wireless_uart_callback (void)
     if(uart_query_byte(WIRELESS_UART_INDEX, &wireless_uart_data))
     {
         fifo_write_buffer(&wireless_uart_fifo, &wireless_uart_data, 1);
-        my_wireless_optimizer(wireless_uart_data);
     }
 #if WIRELESS_UART_AUTO_BAUD_RATE                                                // 开启自动波特率
     if(WIRELESS_UART_AUTO_BAUD_RATE_START == wireless_auto_baud_flag && 3 == fifo_used(&wireless_uart_fifo))
@@ -249,8 +219,7 @@ void wireless_uart_callback (void)
 // 使用示例     wireless_uart_init();
 // 备注信息     
 //-------------------------------------------------------------------------------------------------------------------
-uint8 wireless_uart_init (void)
-{
+uint8 wireless_uart_init (void){
     uint8 return_state = 0;
     set_wireless_type(WIRELESS_UART, wireless_uart_callback);
 
@@ -307,4 +276,22 @@ uint8 wireless_uart_init (void)
     }while(0);
 #endif
     return return_state;
+}
+
+//-------------------------------------------------------------------------------------------------------------------
+// 函数简介     无线转串口模块 格式化打印（类 printf 接口）
+// 参数说明     *format         格式化字符串
+// 参数说明     ...             可变参数
+// 返回参数     void
+// 使用示例     wireless_printf("dist=%.2f hdg=%.1f\r\n", dist, heading);
+// 备注信息     内部使用 256 字节栈缓冲区，单条日志不要超过 255 字符
+//-------------------------------------------------------------------------------------------------------------------
+void wireless_printf (const char *format, ...)
+{
+    char buf[256];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buf, sizeof(buf), format, args);
+    va_end(args);
+    wireless_uart_send_string(buf);
 }
