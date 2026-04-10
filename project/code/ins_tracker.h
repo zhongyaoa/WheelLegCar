@@ -21,6 +21,7 @@
 #define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量
 #define INAV_TRACKER_CTE_GAIN          1.5f       // 横向偏差增益（越大纠偏越积极，过大会振荡）
 #define INAV_TRACKER_CTE_MAX_CORR      40.0f      // 横向偏差最大修正角度 (deg)
+#define INAV_TRACKER_CTE_FADE_DIST     1.0f       // CTE 修正在此距离内线性淡出为零 (m)
 
 typedef enum
 {

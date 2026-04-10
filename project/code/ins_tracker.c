@@ -345,8 +345,10 @@ void ins_tracker_update(void)
         {
             // 单位向量叉积：cte > 0 表示车偏向线段右侧，需向左修正
             float cte = ((cur_x - prev_x) * seg_y - (cur_y - prev_y) * seg_x) / seg_len;
+            // 距目标越近，CTE 修正权重线性淡出，避免接近时振荡
+            float cte_weight = func_limit_ab(dist / INAV_TRACKER_CTE_FADE_DIST, 0.0f, 1.0f);
             // 将 CTE 转换为修正角度（rad→deg），并限幅
-            float cte_corr = atanf(INAV_TRACKER_CTE_GAIN * cte) * (180.0f / 3.14159265f);
+            float cte_corr = atanf(INAV_TRACKER_CTE_GAIN * cte) * (180.0f / 3.14159265f) * cte_weight;
             if(cte_corr >  INAV_TRACKER_CTE_MAX_CORR) cte_corr =  INAV_TRACKER_CTE_MAX_CORR;
             if(cte_corr < -INAV_TRACKER_CTE_MAX_CORR) cte_corr = -INAV_TRACKER_CTE_MAX_CORR;
             // 叠加到方位角：CTE 右偏（cte>0）需要方位角向左（减小）修正
