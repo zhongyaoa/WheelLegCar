@@ -332,6 +332,28 @@ void ins_tracker_update(void)
     // 当前车头相对初始航向的偏差（°）
     float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);
 
+    // 计算横向偏差（Cross-Track Error，CTE）：车相对当前路径线段的垂直偏移（带符号）
+    // 路径线段：prev_point → target；使用 2D 叉积求有符号距离
+    {
+        float seg_x, seg_y, seg_len;
+        float prev_x = recorded_x[current_target_idx - 1];
+        float prev_y = recorded_y[current_target_idx - 1];
+        seg_x = target_x - prev_x;
+        seg_y = target_y - prev_y;
+        seg_len = sqrtf(seg_x * seg_x + seg_y * seg_y);
+        if(seg_len > 0.01f)
+        {
+            // 单位向量叉积：cte > 0 表示车偏向线段右侧，需向左修正
+            float cte = ((cur_x - prev_x) * seg_y - (cur_y - prev_y) * seg_x) / seg_len;
+            // 将 CTE 转换为修正角度（rad→deg），并限幅
+            float cte_corr = atanf(INAV_TRACKER_CTE_GAIN * cte) * (180.0f / 3.14159265f);
+            if(cte_corr >  INAV_TRACKER_CTE_MAX_CORR) cte_corr =  INAV_TRACKER_CTE_MAX_CORR;
+            if(cte_corr < -INAV_TRACKER_CTE_MAX_CORR) cte_corr = -INAV_TRACKER_CTE_MAX_CORR;
+            // 叠加到方位角：CTE 右偏（cte>0）需要方位角向左（减小）修正
+            bearing_local = normalize_angle(bearing_local - cte_corr);
+        }
+    }
+
     // 偏航误差
     float heading_err = normalize_angle(bearing_local - current_heading_rel);
 
