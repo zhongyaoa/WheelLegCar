@@ -19,6 +19,13 @@ subject1_task_data_t    s1_task_data     = {{0}, 0, 0, 0, POINT_TYPE_START, 0, 0
 subject1_preview_data_t s1_preview_data;
 uint8                   selected_subject = 0;
 
+const subject1_ui_context_t g_subject1_ui_ctx =
+{
+    &s1_ui_state,
+    &s1_task_data,
+    &s1_preview_data,
+};
+
 static uint32 btn_up_cnt   = 0;
 static uint32 btn_down_cnt = 0;
 static uint32 btn_left_cnt = 0;
@@ -439,6 +446,6 @@ void subject1_poll(void)
     if(s1_screen_dirty)
     {
         s1_screen_dirty = 0;
-        subject1_ui_redraw();
+        competition_ui_redraw();
     }
 }

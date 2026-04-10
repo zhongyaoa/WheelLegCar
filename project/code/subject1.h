@@ -56,10 +56,18 @@ typedef struct
     uint8  routeB_count;
 } subject1_preview_data_t;
 
+typedef struct
+{
+    ui_state_enum           *ui_state;
+    subject1_task_data_t    *task_data;
+    subject1_preview_data_t *preview_data;
+} subject1_ui_context_t;
+
 extern ui_state_enum           s1_ui_state;
 extern subject1_task_data_t    s1_task_data;
 extern subject1_preview_data_t s1_preview_data;
 extern uint8                   selected_subject;
+extern const subject1_ui_context_t g_subject1_ui_ctx;
 
 void subject1_init(void);
 void subject1_poll(void);

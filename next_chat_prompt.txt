@@ -1,0 +1,381 @@
+你现在接手的是一个嵌入式轮腿平衡小车固件项目，请先快速理解架构后再动代码。
+
+## 1. 项目基本信息
+- 项目路径：`f:\zhinengche\wlc\WheelLegCar`
+- 这是一个基于 `CYT4BB7`（Infineon/Cypress Traveo T2G）的轮腿平衡小车项目
+- 工程使用 `IAR Embedded Workbench 9.40.1`
+- 没有 Makefile / CMake / 自动化测试 / CI
+- 构建方式：打开 `project/iar/cyt4bb7.eww` 在 IAR 中编译
+- 双核：
+  - `project/user/main_cm7_0.c`：主控制核心
+  - `project/user/main_cm7_1.c`：次核心（当前基本没什么控制逻辑）
+
+## 2. 硬件组成
+- IMU：`IMU660RA`
+- 电机：无刷电机驱动，通过 UART 控制
+- 舵机：4 个腿部舵机 PWM 控制
+- 无线串口：用于调参
+- 小车是“轮腿平衡车”，不是普通差速车
+
+## 3. 当前最关键的控制文件
+重点看这些文件：
+- `project/code/posture_control.c`
+- `project/code/posture_control.h`
+- `project/code/balance_control.c`
+- `project/code/balance_control.h`
+- `project/code/ins_tracker.c`
+- `project/code/ins_tracker.h`
+- `project/code/steer_control.c`
+- `project/code/controler.c`
+
+如果涉及电机通信，再看：
+- `project/code/small_driver_uart_control.c`
+- `project/code/small_driver_uart_control.h`
+
+## 4. 当前控制主链路
+### 4.1 周期主流程
+主控制周期函数在：
+- `project/code/posture_control.c` 的 `pit_call_back()`
+
+里面大致做这些事：
+1. 读取 IMU
+2. 四元数解算姿态
+3. 更新 `quat_yaw_deg` 和 `quat_yaw_rate_dps`
+4. 惯导积分位置 `inav_x / inav_y`
+5. 每 20ms 跑速度环
+6. 每 5ms 跑角度环
+7. 每 1ms 跑角速度环
+8. 调用：
+   - `car_state_calculate()`
+   - `car_steer_control()`
+   - `car_motor_control()`
+
+### 4.2 平衡控制结构
+平衡控制主要在 `balance_control.c`
+
+横滚平衡（主平衡）是三环串级：
+- 速度环 `speed_cycle`
+- 角度环 `angle_cycle`
+- 角速度环 `angular_speed_cycle`
+
+对应变量：
+- `roll_balance_cascade`
+
+俯仰/腿部控制：
+- `pitch_balance_cascade`
+
+### 4.3 电机控制
+最终电机输出在：
+- `project/code/posture_control.c` 的 `car_motor_control()`
+
+逻辑是：
+1. 先用 `roll_balance_cascade.angular_speed_cycle.out` 生成左右轮基础占空比
+2. 再叠加 `turn_diff_ext` 形成左右轮差速
+3. 然后调用：
+   - `small_driver_set_duty(-left_motor_duty, right_motor_duty)`
+
+注意：
+- 左轮输出最终要取反
+- 这是当前工程的重要符号约定
+
+## 5. 当前转向逻辑
+### 5.1 posture_control 中已经整理了转向接口
+当前已经把转向逻辑收口到 `posture_control` 中：
+
+在 `project/code/posture_control.h` 中：
+- `int16 car_turn_control(float heading_err, float yaw_rate_dps);`
+- `void car_turn_reset(void);`
+
+在 `project/code/posture_control.c` 中：
+- `car_turn_control()`：根据航向误差和偏航角速度计算 `turn_diff_ext`
+- `car_turn_reset()`：把 `turn_diff_ext` 清零
+
+### 5.2 转向输出变量
+- `turn_diff_ext`：外部转向差速注入
+- 最终由 `car_motor_control()` 叠加到左右轮
+
+### 5.3 当前转向算法
+在 `posture_control.c` 中，转向函数目前是 PD：
+- `POSTURE_TURN_KP`
+- `POSTURE_TURN_KD`
+
+同时在 `car_motor_control()` 里还有一层平衡时的转向阻尼：
+- `BALANCE_TURN_DAMPING_KD`
+
+所以当前工程中，转向相关可能存在“两层阻尼”的情况。  
+如果你要改转向手感，先确认是否需要保留两层阻尼，避免重复 D 项导致转向过钝。
+
+## 6. 当前 ins_tracker 的职责
+`project/code/ins_tracker.c` 是上层导航/循迹模块，不应该直接深度侵入底层电机控制。
+
+它当前做的事：
+1. 记录航点
+2. 维护惯导参考航向
+3. 根据目标点计算：
+   - `heading_err`
+   - `target_speed`
+4. 调用：
+   - `car_turn_control(heading_err, quat_yaw_rate_dps)`
+
+也就是说：
+- `ins_tracker` 负责“算应该怎么转”
+- `posture_control` 负责“把转向变成差速输出”
+
+如果你继续开发，尽量保持这个分层。
+
+## 7. posture_control 当前包含哪些职责
+`posture_control.c` 当前包含 5 类职责：
+1. `car_state_calculate()`：车体状态/摔倒检测/PID 渐变
+2. `car_steer_control()`：腿部舵机控制/跳跃状态机
+3. `pit_call_back()`：主周期调度
+4. `car_turn_control()` / `car_turn_reset()`：转向控制接口
+5. `car_motor_control()`：电机输出合成
+
+## 8. 当前航向角相关逻辑
+### 8.1 航向角来源
+在 `pit_call_back()` 中：
+- `quat_yaw_deg = roll_balance_cascade.posture_value.yaw`
+- `quat_yaw_rate_dps` 由相邻两次偏航角差分计算
+
+### 8.2 惯导参考航向
+- `inav_heading_ref` 是惯导坐标系参考航向
+- `ins_tracker` 在记录第一个点时，会锁定当前平均航向作为参考
+
+### 8.3 重要说明
+之前工程里有“偏航锁定”变量，但当前已经去掉未使用部分：
+- `yaw_angle`
+- `yaw_target`
+- `yaw_locked`
+
+所以现在不要按“老的偏航锁定框架”去理解，应按：
+- 四元数航向解算
+- 导航参考航向
+- 转向 PD / 差速控制
+来理解。
+
+## 9. 当前前进/后退逻辑
+前后运动不是直接给轮速，而是通过平衡环实现：
+- `target_speed` → 速度环
+- 速度环影响姿态目标
+- 再经过角度环和角速度环输出到轮子
+
+所以改“前进/后退手感”通常不是只改一个轮速变量，而是要看：
+- `target_speed`
+- 速度环参数
+- 角度环参数
+- 机械零点 `mechanical_zero`
+
+## 10. 当前舵机/腿部逻辑
+4 个舵机由：
+- `steer_control.c`
+- `car_steer_control()`
+来控制
+
+作用包括：
+- 配合平衡姿态
+- 腿部前后倾
+- 跳跃动作
+- 缓冲动作
+
+所以这个车的运动控制不是只有“左右轮差速”。
+
+## 11. 重要调参点
+### 平衡相关
+在 `balance_control.c` 的 `balance_cascade_init()`：
+- `roll_balance_cascade.posture_value.mechanical_zero`
+- 各环 PID 参数
+
+### 转向相关
+在 `posture_control.c` / `posture_control.h`：
+- `POSTURE_TURN_KP`
+- `POSTURE_TURN_KD`
+- `BALANCE_TURN_DAMPING_KD`
+- `turn_duty_max`
+
+### 导航相关
+在 `ins_tracker.c`：
+- 航点逻辑
+- 到点判定
+- 目标速度斜坡等
+
+## 12. 当前 UI / 任务结构（非常重要）
+现在 UI 已经从“科目一专用”开始整理成“公共比赛 UI”框架。
+
+### 12.1 当前相关文件
+- `project/code/UI.c`
+- `project/code/UI.h`
+- `project/code/subject1.c`
+- `project/code/subject1.h`
+
+### 12.2 当前公共 UI 入口
+在 `UI.h` 中保留的是：
+- `competition_ui_init(void);`
+- `competition_ui_redraw(void);`
+
+不要再改回 `subject1_ui_*` 命名。
+
+### 12.3 当前 UI 分层
+目前已经整理成：
+
+- `competition_ui_redraw()`：公共绘制入口
+- **只要当前是 `UI_STATE_HOME`，统一画公共首页**
+- **离开 `HOME` 以后，再按 `selected_subject` 分发到各科目页面**
+
+也就是说现在逻辑应按这个理解：
+
+```c
+if(*g_subject1_ui_ctx.ui_state == UI_STATE_HOME)
+{
+    draw_subject_home();
+}
+else if(selected_subject == 0)
+{
+    draw_subject1();
+}
+else if(selected_subject == 1)
+{
+    draw_subject2();
+}
+else
+{
+    draw_subject3();
+}
+```
+
+### 12.4 当前科目页面结构
+`UI.c` 中现在已经有：
+- `draw_subject_home()`：公共首页
+- `draw_subject1()`：科目一页面入口
+- `draw_subject2()`：科目二占位页
+- `draw_subject3()`：科目三占位页
+
+科目一页面入口 `draw_subject1()` 内部再按：
+- `UI_STATE_COLLECT`
+- `UI_STATE_PREVIEW`
+- `UI_STATE_STANDBY`
+- `UI_STATE_RUNNING`
+- `UI_STATE_DONE`
+
+分发到对应页面函数。
+
+### 12.5 当前首页选择逻辑
+首页项目选择逻辑还在 `subject1_poll()` 中：
+- `UP/DOWN` 修改 `selected_subject`
+- `LEFT` 在首页进入当前选中的项目
+
+所以你后续加科目二/科目三时：
+- 尽量沿用 `selected_subject`
+- 不要把首页逻辑再拆散到别处
+
+## 13. 当前 subject1 的 UI 上下文
+为了后续扩展多科目，已经开始把 UI 对 `s1_*` 全局变量的直接依赖往上下文结构过渡。
+
+在 `subject1.h` 中现在有：
+- `subject1_ui_context_t`
+- `extern const subject1_ui_context_t g_subject1_ui_ctx;`
+
+`subject1_ui_context_t` 里有：
+- `ui_state`
+- `task_data`
+- `preview_data`
+
+在 `subject1.c` 中已经定义：
+- `g_subject1_ui_ctx`
+
+目前已经至少有这些页面开始通过上下文访问：
+- `draw_subject1_collect()`
+- `draw_subject1_preview()`
+
+后续如果你继续开发科目二/科目三，建议沿用同样模式：
+- `subject2_ui_context_t`
+- `subject3_ui_context_t`
+
+## 14. 当前 UI 里已经踩过的坑
+### 14.1 不要重复定义 `subject1_ui_context_t`
+这个类型已经在 `subject1.h` 中定义过，  
+不要再在 `subject1.c` 里重复 `typedef`，否则 IAR 会报：
+- `Error[Pe256]: invalid redeclaration of type name "subject1_ui_context_t"`
+
+### 14.2 不要再使用旧的绘制函数名
+之前已经把：
+- `draw_home`
+- `draw_collect`
+- `draw_preview`
+- `draw_standby`
+- `draw_running`
+- `draw_done`
+
+逐步改成了以 `subject1` 为前缀的结构。  
+如果你再改 `competition_ui_redraw()`，不要重新引用旧名字，否则会报链接错误：
+- `no definition for "draw_home"`
+- `no definition for "draw_collect"`
+等
+
+### 14.3 IPS200 屏幕很容易坐标越界断言
+屏幕底层驱动在：
+- `libraries/zf_device/zf_device_ips200.c`
+
+如果报：
+- `assert error file: zf_device_ips200.c line:331`
+
+基本就是绘图坐标超范围了。
+
+已经处理过的风险：
+- `draw_dot()` 已加边界裁剪
+- `draw_circle()` 已加边界保护
+- 科目二/三占位页底部那句太长的提示已缩短成不会越界的版本
+
+如果你新增 UI：
+- 注意 `ips200_show_string()` 不会自动裁剪右边界
+- 8x16 字体下一行宽度大约是 `8 * 字符数`
+- 屏幕竖屏宽度是 240
+
+## 15. 当前科目一任务流程
+`subject1.c` 仍然负责：
+- 首页按键轮询
+- 科目一采点
+- 路径预览
+- 发车
+- 结束后的 UI 状态切换
+
+也就是说当前项目还没有真正实现：
+- `subject2.c`
+- `subject3.c`
+
+如果你接下来要加科目二和科目三，尽量不要把所有逻辑继续塞进 `subject1.c`，应考虑分别建：
+- `subject2.c/.h`
+- `subject3.c/.h`
+
+但不要大重构，先最小落地。
+
+## 16. 你接下来要做的任务
+我要你继续开发：
+- 添加科目二
+- 添加科目三
+- 它们与科目一共用同一个 `UI.c`
+
+请遵守：
+1. 先阅读：
+   - `UI.c`
+   - `UI.h`
+   - `subject1.c`
+   - `subject1.h`
+2. 用一句话总结当前 UI 分发结构
+3. 标出你准备新增/修改的文件
+4. 再开始改代码
+
+## 17. 代码风格要求
+请遵守：
+1. 修改前先读相关文件，不要凭猜测改
+2. 尽量保持现有变量命名和注释风格
+3. 不要无意义重构整个文件
+4. 不要引入复杂抽象，保持嵌入式风格
+5. 如果只是加小功能，尽量局部改动
+6. 这个工程没有自动测试，改完要尽量做静态检查，避免明显编译错误
+
+## 18. 我对你的要求
+你需要：
+- 先快速理解代码结构
+- 用最少但准确的改动完成任务
+- 解释清楚你改的是哪一层逻辑
+- 如果发现当前结构有隐藏问题，先指出再改

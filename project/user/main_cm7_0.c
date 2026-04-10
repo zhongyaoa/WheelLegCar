@@ -37,6 +37,7 @@
 #include "controler.h"
 #include "ins_tracker.h"
 #include "subject1.h"
+#include "subject2.h"
 #include "UI.h"
 // 打开新的工程或者工程移动了位置务必执行以下操作
 // 第一步 关闭上面所有打开的文件
@@ -61,26 +62,47 @@ int main(void)
     ins_tracker_init();                 // 惯性导航循迹模块初始化
 
     pit_ms_init(PIT_CH0, 1);            // 1ms 定时器，触发 pit_call_back
-    subject1_ui_init();                 // 科目一 UI 初始化（含屏幕初始化）
+    competition_ui_init();              // 公共比赛 UI 初始化（含屏幕初始化）
     subject1_init();                    // 科目一任务流程初始化
+    subject2_init();                    // 科目二任务流程初始化
+    competition_ui_redraw();            // 上电立即绘制首页
     wireless_printf("\r\n UI init ok. [UP]=Enter Subject 1\r\n");
 
     uint32 btn_poll_tick = 0;
     while(true)
     {
-        // 每 50ms 轮询一次 UI 按键与循迹更新
         btn_poll_tick++;
         if(btn_poll_tick >= 5)
         {
             btn_poll_tick = 0;
 
-            // UI/任务轮询（处理按键 + 屏幕刷新）
-            subject1_poll();
+            if(selected_subject == 1)
+            {
+                if(s2_ui_state == UI_STATE_HOME)
+                {
+                    subject_home_poll();
+                }
+                else
+                {
+                    subject2_poll();
+                }
+            }
+            else if(s1_ui_state == UI_STATE_HOME)
+            {
+                subject_home_poll();
+            }
+            else
+            {
+                subject1_poll();
+            }
 
-            // 当 UI 在行进状态时，同步调用循迹更新
-            if(s1_ui_state == UI_STATE_RUNNING)
+            if(selected_subject == 0 && s1_ui_state == UI_STATE_RUNNING)
             {
                 ins_tracker_update();
+            }
+            else if(selected_subject == 1 && s2_ui_state == UI_STATE_RUNNING)
+            {
+                subject2_update();
             }
         }
 

@@ -1158,6 +1158,12 @@
             <name>$PROJ_DIR$\..\..\code\subject1.h</name>
         </file>
         <file>
+            <name>$PROJ_DIR$\..\..\code\subject2.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\..\..\code\subject2.h</name>
+        </file>
+        <file>
             <name>$PROJ_DIR$\..\..\code\UI.c</name>
         </file>
         <file>

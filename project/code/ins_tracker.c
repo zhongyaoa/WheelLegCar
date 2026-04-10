@@ -274,7 +274,7 @@ void ins_tracker_update(void)
 {
     if(tracker_state != TRACKER_STATE_RUNNING)
     {
-        turn_diff_ext = 0;
+        car_turn_reset();
         return;
     }
 
@@ -289,7 +289,7 @@ void ins_tracker_update(void)
         // 所有航点均已到达，循迹完成
         tracker_state = TRACKER_STATE_DONE;
         target_speed  = 0.0f;
-        turn_diff_ext = 0;
+        car_turn_reset();
         inav_active   = 0;
         led(on);
         //wireless_printf("[INAV] All points done.\r\n");
@@ -313,7 +313,7 @@ void ins_tracker_update(void)
         {
             tracker_state = TRACKER_STATE_DONE;
             target_speed  = 0.0f;
-            turn_diff_ext = 0;
+            car_turn_reset();
             inav_active   = 0;
             led(on);
             //wireless_printf("[INAV] All points done.\r\n");
@@ -339,9 +339,8 @@ void ins_tracker_update(void)
     float desired_speed = tracker_calc_target_speed(dist, heading_err);
     target_speed = tracker_ramp_target_speed(target_speed, desired_speed);
 
-    // PD 控制输出差速
-    int16 td = (int16)(TRACKER_YAW_KP * heading_err - TRACKER_YAW_KD * quat_yaw_rate_dps);
-    turn_diff_ext = func_limit_ab(-td, -turn_duty_max, turn_duty_max);
+    // 调用 posture_control 中的转向控制函数输出差速
+    car_turn_control(heading_err, quat_yaw_rate_dps);
 
     //wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
      //               current_target_idx, dist, bearing_local, current_heading_rel,
