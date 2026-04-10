@@ -344,10 +344,21 @@ static void subject1_launch(void)
         }
     }
 
-    inav_x           = 0.0f;
-    inav_y           = 0.0f;
-    inav_active      = 1;
-    inav_heading_ref = s1_task_data.collect_heading_ref;
+    // 用起点→第二目标点的方向推算当前惯导坐标系的参考航向，
+    // 消除断电重启后 IMU 绝对角度漂移的影响。
+    // 前提：每次发车时车头已对准第二个目标点（full[1]），由用户保证。
+    {
+        float dx01 = full_x[1] - full_x[0];
+        float dy01 = full_y[1] - full_y[0];
+        // 存储坐标系中，起点→第二目标点的方位角（°），Y轴正方向=0，顺时针为正
+        float bearing_stored_deg = atan2f(dx01, dy01) * (180.0f / 3.14159265f);
+        // 当前 IMU 对应该方位，反推坐标系参考航向
+        inav_heading_ref = quat_yaw_deg - bearing_stored_deg;
+    }
+
+    inav_x      = 0.0f;
+    inav_y      = 0.0f;
+    inav_active = 1;
 
     run_state = 1;
     ins_tracker_start_with_points(full_x, full_y, full_count);
