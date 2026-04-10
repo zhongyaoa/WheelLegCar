@@ -72,5 +72,6 @@ extern const subject1_ui_context_t g_subject1_ui_ctx;
 void subject1_init(void);
 void subject1_poll(void);
 void subject1_clear_and_recollect(void);
+void subject1_prepare_routes(void);
 
 #endif /* _SUBJECT1_H_ */

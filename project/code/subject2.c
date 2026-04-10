@@ -3,6 +3,7 @@
 */
 
 #include "subject2.h"
+#include "subject1.h"
 #include "UI.h"
 #include "controler.h"
 #include "posture_control.h"
@@ -131,6 +132,8 @@ void subject_home_poll(void)
             if(s1_task_data.has_start && s1_task_data.has_turn && s1_task_data.waypoint_count >= 2)
             {
                 inav_active = 0;
+                s1_task_data.route_sel = 0;
+                subject1_prepare_routes();
                 s1_ui_state = UI_STATE_PREVIEW;
             }
             else

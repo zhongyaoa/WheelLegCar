@@ -256,7 +256,7 @@ static uint8 generate_bypass_route(
     return out_count;
 }
 
-static void subject1_prepare_routes(void)
+void subject1_prepare_routes(void)
 {
     uint8 i;
     float start_x, start_y, turn_x, turn_y;
