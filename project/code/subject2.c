@@ -355,7 +355,22 @@ static void subject2_launch(void)
     inav_x = 0.0f;
     inav_y = 0.0f;
     inav_active = 1;
-    inav_heading_ref = s2_task_data.collect_heading_ref;
+
+    // 用起点→第一个雷区的方向推算当前惯导坐标系参考航向，
+    // 消除断电重启后 IMU 绝对角度漂移的影响。
+    // 前提：每次发车时车头已对准第一个雷区中心（points[1]），由用户保证。
+    if(s2_task_data.point_count >= 2)
+    {
+        float dx01 = s2_task_data.points[1].x - s2_task_data.points[0].x;
+        float dy01 = s2_task_data.points[1].y - s2_task_data.points[0].y;
+        float bearing_stored_deg = atan2f(dx01, dy01) * (180.0f / 3.14159265f);
+        inav_heading_ref = quat_yaw_deg - bearing_stored_deg;
+    }
+    else
+    {
+        inav_heading_ref = quat_yaw_deg;
+    }
+
     s2_current_target_idx = 1;
     s2_current_mine_idx = 0;
     s2_phase = S2_PHASE_TO_MINE;
@@ -584,7 +599,7 @@ void subject2_update(void)
 
     bearing_local = point_bearing(inav_x, inav_y, target_x, target_y);
     yaw_used_deg = subject2_current_yaw_deg();
-    current_heading_rel = normalize_angle(yaw_used_deg - s2_task_data.collect_heading_ref);
+    current_heading_rel = normalize_angle(yaw_used_deg - inav_heading_ref);
     heading_err = normalize_angle(bearing_local - current_heading_rel);
 
     target_speed = ramp_speed(target_speed, S2_CRUISE_SPEED);
