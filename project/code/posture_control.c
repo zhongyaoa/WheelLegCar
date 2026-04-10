@@ -41,7 +41,7 @@ int16 turn_duty_max = 300;
 #define POSTURE_SPIN_DONE_ERR_DEG 5.0f
 #define POSTURE_SPIN_DONE_RATE_DPS 25.0f
 #define POSTURE_SPIN_FEED_DUTY 120
-#define POSTURE_SPIN_MOTOR_DUTY 300
+#define POSTURE_SPIN_MOTOR_DUTY 500
 
 typedef enum
 {
