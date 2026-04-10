@@ -81,6 +81,65 @@ static void switch_state(ui_state_enum new_state)
     s1_screen_dirty = 1;
 }
 
+static void subject1_save_to_flash(void)
+{
+    uint8 i;
+    uint32 total = S1_FLASH_HDR_LEN + (uint32)s1_task_data.waypoint_count * 3;
+
+    flash_buffer_clear();
+    flash_union_buffer[0].uint32_type           = S1_FLASH_MAGIC;
+    flash_union_buffer[1].float_type            = s1_task_data.collect_heading_ref;
+    flash_union_buffer[2].uint8_type            = s1_task_data.waypoint_count;
+    flash_union_buffer[3].uint8_type            = s1_task_data.has_start;
+    flash_union_buffer[4].uint8_type            = s1_task_data.has_turn;
+
+    for(i = 0; i < s1_task_data.waypoint_count; i++)
+    {
+        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 0].float_type  = s1_task_data.points[i].x;
+        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 1].float_type  = s1_task_data.points[i].y;
+        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type  = (uint8)s1_task_data.points[i].type;
+    }
+
+    if(flash_check(S1_FLASH_SECTION, S1_FLASH_PAGE))
+        flash_erase_page(S1_FLASH_SECTION, S1_FLASH_PAGE);
+    flash_write_page_from_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, total);
+}
+
+static uint8 subject1_load_from_flash(void)
+{
+    uint8 i;
+    uint8 wpc;
+    uint32 total;
+
+    flash_read_page_to_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, S1_FLASH_HDR_LEN);
+
+    if(flash_union_buffer[0].uint32_type != S1_FLASH_MAGIC)
+        return 0;
+
+    wpc = flash_union_buffer[2].uint8_type;
+    if(wpc > S1_MAX_WAYPOINTS)
+        return 0;
+
+    total = S1_FLASH_HDR_LEN + (uint32)wpc * 3;
+    flash_read_page_to_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, total);
+
+    memset(&s1_task_data, 0, sizeof(s1_task_data));
+    s1_task_data.collect_heading_ref  = flash_union_buffer[1].float_type;
+    s1_task_data.waypoint_count       = wpc;
+    s1_task_data.has_start            = flash_union_buffer[3].uint8_type;
+    s1_task_data.has_turn             = flash_union_buffer[4].uint8_type;
+    s1_task_data.current_point_type   = POINT_TYPE_START;
+
+    for(i = 0; i < wpc; i++)
+    {
+        s1_task_data.points[i].x    = flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 0].float_type;
+        s1_task_data.points[i].y    = flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 1].float_type;
+        s1_task_data.points[i].type = (point_type_enum)flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type;
+    }
+
+    return 1;
+}
+
 static void reset_collect_data(void)
 {
     memset(&s1_task_data, 0, sizeof(s1_task_data));
@@ -293,65 +352,6 @@ static void subject1_launch(void)
     run_state = 1;
     ins_tracker_start_with_points(full_x, full_y, full_count);
     switch_state(UI_STATE_RUNNING);
-}
-
-static void subject1_save_to_flash(void)
-{
-    uint8 i;
-    uint32 total = S1_FLASH_HDR_LEN + (uint32)s1_task_data.waypoint_count * 3;
-
-    flash_buffer_clear();
-    flash_union_buffer[0].uint32_type           = S1_FLASH_MAGIC;
-    flash_union_buffer[1].float_type            = s1_task_data.collect_heading_ref;
-    flash_union_buffer[2].uint8_type            = s1_task_data.waypoint_count;
-    flash_union_buffer[3].uint8_type            = s1_task_data.has_start;
-    flash_union_buffer[4].uint8_type            = s1_task_data.has_turn;
-
-    for(i = 0; i < s1_task_data.waypoint_count; i++)
-    {
-        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 0].float_type  = s1_task_data.points[i].x;
-        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 1].float_type  = s1_task_data.points[i].y;
-        flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type  = (uint8)s1_task_data.points[i].type;
-    }
-
-    if(flash_check(S1_FLASH_SECTION, S1_FLASH_PAGE))
-        flash_erase_page(S1_FLASH_SECTION, S1_FLASH_PAGE);
-    flash_write_page_from_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, total);
-}
-
-static uint8 subject1_load_from_flash(void)
-{
-    uint8 i;
-    uint8 wpc;
-    uint32 total;
-
-    flash_read_page_to_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, S1_FLASH_HDR_LEN);
-
-    if(flash_union_buffer[0].uint32_type != S1_FLASH_MAGIC)
-        return 0;
-
-    wpc = flash_union_buffer[2].uint8_type;
-    if(wpc > S1_MAX_WAYPOINTS)
-        return 0;
-
-    total = S1_FLASH_HDR_LEN + (uint32)wpc * 3;
-    flash_read_page_to_buffer(S1_FLASH_SECTION, S1_FLASH_PAGE, total);
-
-    memset(&s1_task_data, 0, sizeof(s1_task_data));
-    s1_task_data.collect_heading_ref  = flash_union_buffer[1].float_type;
-    s1_task_data.waypoint_count       = wpc;
-    s1_task_data.has_start            = flash_union_buffer[3].uint8_type;
-    s1_task_data.has_turn             = flash_union_buffer[4].uint8_type;
-    s1_task_data.current_point_type   = POINT_TYPE_START;
-
-    for(i = 0; i < wpc; i++)
-    {
-        s1_task_data.points[i].x    = flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 0].float_type;
-        s1_task_data.points[i].y    = flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 1].float_type;
-        s1_task_data.points[i].type = (point_type_enum)flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type;
-    }
-
-    return 1;
 }
 
 void subject1_init(void)
