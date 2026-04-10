@@ -84,6 +84,32 @@ static uint8 btn_long_press(Button bt, uint32 *cnt, uint32 hold_ticks)
     return 0;
 }
 
+static void switch_state(ui_state_enum new_state)
+{
+    s2_ui_state = new_state;
+    s2_screen_dirty = 1;
+}
+
+static void subject2_reset_data(void)
+{
+    memset(&s2_task_data, 0, sizeof(s2_task_data));
+    s2_task_data.current_point_type = S2_POINT_START;
+    s2_phase = S2_PHASE_IDLE;
+    s2_current_target_idx = 0;
+    s2_current_mine_idx = 0;
+    s2_spin_dir = 1;
+    s2_spin_lap_count = 0;
+    s2_spin_target_yaw = 0.0f;
+    s2_spin_accum_deg = 0.0f;
+    s2_yaw_bias_deg = 0.0f;
+    inav_x = 0.0f;
+    inav_y = 0.0f;
+    inav_active = 0;
+    target_speed = 0.0f;
+    car_turn_reset();
+    car_spin_stop();
+}
+
 void subject_home_poll(void)
 {
     if(btn_rising(UP, &btn_up_cnt))
@@ -188,12 +214,6 @@ static float subject2_current_yaw_deg(void)
     return subject2_normalize_angle(quat_yaw_deg + s2_yaw_bias_deg);
 }
 
-static void switch_state(ui_state_enum new_state)
-{
-    s2_ui_state = new_state;
-    s2_screen_dirty = 1;
-}
-
 static void subject2_save_to_flash(void)
 {
     uint8 i;
@@ -253,26 +273,6 @@ static uint8 subject2_load_from_flash(void)
     }
 
     return 1;
-}
-
-static void subject2_reset_data(void)
-{
-    memset(&s2_task_data, 0, sizeof(s2_task_data));
-    s2_task_data.current_point_type = S2_POINT_START;
-    s2_phase = S2_PHASE_IDLE;
-    s2_current_target_idx = 0;
-    s2_current_mine_idx = 0;
-    s2_spin_dir = 1;
-    s2_spin_lap_count = 0;
-    s2_spin_target_yaw = 0.0f;
-    s2_spin_accum_deg = 0.0f;
-    s2_yaw_bias_deg = 0.0f;
-    inav_x = 0.0f;
-    inav_y = 0.0f;
-    inav_active = 0;
-    target_speed = 0.0f;
-    car_turn_reset();
-    car_spin_stop();
 }
 
 static uint8 subject2_can_enter_preview(void)
