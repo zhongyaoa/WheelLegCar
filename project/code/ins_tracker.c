@@ -334,8 +334,18 @@ void ins_tracker_update(void)
         dist = point_distance(cur_x, cur_y, target_x, target_y);
     }
 
+    // Look-ahead：接近当前航点且存在下一航点时，瞄准下一航点方向
+    // 避免距离很近时 bearing 剧烈翻转导致的抖动转向
+    float aim_x = target_x;
+    float aim_y = target_y;
+    if(dist < INAV_TRACKER_LOOKAHEAD_DIST && (current_target_idx + 1) < tracker_point_count)
+    {
+        aim_x = recorded_x[current_target_idx + 1];
+        aim_y = recorded_y[current_target_idx + 1];
+    }
+
     // 目标方位角（相对于 initial_heading_deg 为 0° 的坐标系）
-    float bearing_local = point_bearing(cur_x, cur_y, target_x, target_y);
+    float bearing_local = point_bearing(cur_x, cur_y, aim_x, aim_y);
 
     // 当前车头相对初始航向的偏差（°）
     float current_heading_rel = normalize_angle(quat_yaw_deg - initial_heading_deg);

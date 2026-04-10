@@ -19,6 +19,7 @@
 #define INAV_TRACKER_TURN_SLOWDOWN_ANG 25.0f      // 转角大于该值时开始按角度降速 (deg)
 #define INAV_TRACKER_TURN_STOP_ANG     70.0f      // 转角接近该值时降到最低速度 (deg)
 #define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量
+#define INAV_TRACKER_LOOKAHEAD_DIST    0.4f      // 接近当前航点时切换瞄准下一航点的距离阈值 (m)
 
 typedef enum
 {
