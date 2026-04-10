@@ -60,6 +60,7 @@ int main(void)
     led_init();                         // LED 初始化
     led(off);
     ins_tracker_init();                 // 惯性导航循迹模块初始化
+    flash_init();                       // Flash 初始化（点位数据持久化）
 
     pit_ms_init(PIT_CH0, 1);            // 1ms 定时器，触发 pit_call_back
     competition_ui_init();              // 公共比赛 UI 初始化（含屏幕初始化）
