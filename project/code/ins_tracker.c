@@ -1,6 +1,7 @@
 #include "ins_tracker.h"
 #include "posture_control.h"
 #include "controler.h"
+#include "subject1.h"
 #include "math.h"
 
 // ===== 状态 =====
@@ -158,8 +159,9 @@ void ins_tracker_start_with_points(const float *px, const float *py, uint8 count
     tracker_state       = TRACKER_STATE_RUNNING;
     target_speed        = INAV_TRACKER_MIN_SPEED;
 
-    //wireless_printf("[INAV] ExtStart: %d pts, heading_ref=%.1f\r\n",
-    //                count, initial_heading_deg);
+#if S1_ISDEBUG
+    wireless_printf("[TRK] Start: pts=%d heading_ref=%.1f\r\n", count, initial_heading_deg);
+#endif
 }
 
 //=============================================================================
@@ -292,7 +294,9 @@ void ins_tracker_update(void)
         car_turn_reset();
         inav_active   = 0;
         led(on);
-        //wireless_printf("[INAV] All points done.\r\n");
+#if S1_ISDEBUG
+        wireless_printf("[TRK] All done. x=%.2f y=%.2f\r\n", cur_x, cur_y);
+#endif
         return;
     }
 
@@ -304,8 +308,10 @@ void ins_tracker_update(void)
     // 到达判定
     if(dist < INAV_TRACKER_ARRIVE_DIST)
     {
-        //wireless_printf("[INAV] Arrived pt%d (dist=%.2fm)\r\n", current_target_idx, dist);
-
+#if S1_ISDEBUG
+        wireless_printf("[TRK] Arrived pt%d dist=%.2f x=%.2f y=%.2f\r\n",
+                        current_target_idx, dist, cur_x, cur_y);
+#endif
         current_target_idx++;
 
         // 检查是否所有航点均已到达
@@ -316,7 +322,9 @@ void ins_tracker_update(void)
             car_turn_reset();
             inav_active   = 0;
             led(on);
-            //wireless_printf("[INAV] All points done.\r\n");
+#if S1_ISDEBUG
+            wireless_printf("[TRK] All done. x=%.2f y=%.2f\r\n", cur_x, cur_y);
+#endif
             return;
         }
 
@@ -342,7 +350,16 @@ void ins_tracker_update(void)
     // 调用 posture_control 中的转向控制函数输出差速
     car_turn_control(heading_err, quat_yaw_rate_dps);
 
-    //wireless_printf("[INAV] ->pt%d dist=%.2fm bear=%.1f hdg_rel=%.1f err=%.1f v=%.1f vd=%.1f td=%d x=%.2f y=%.2f\r\n",
-     //               current_target_idx, dist, bearing_local, current_heading_rel,
-       //             heading_err, target_speed, desired_speed, (int)turn_diff_ext, cur_x, cur_y);
+#if S1_ISDEBUG
+    {
+        static uint8 dbg_cnt = 0;
+        if(++dbg_cnt >= 20)
+        {
+            dbg_cnt = 0;
+            wireless_printf("[TRK] ->pt%d dist=%.2f bear=%.1f hdg_rel=%.1f err=%.1f spd=%.0f td=%d x=%.2f y=%.2f\r\n",
+                            current_target_idx, dist, bearing_local, current_heading_rel,
+                            heading_err, target_speed, (int)turn_diff_ext, cur_x, cur_y);
+        }
+    }
+#endif
 }

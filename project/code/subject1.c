@@ -137,6 +137,17 @@ static uint8 subject1_load_from_flash(void)
         s1_task_data.points[i].type = (point_type_enum)flash_union_buffer[S1_FLASH_HDR_LEN + i * 3 + 2].uint8_type;
     }
 
+#if S1_ISDEBUG
+    wireless_printf("[S1] Flash loaded: wpc=%d heading_ref=%.1f\r\n",
+                    wpc, s1_task_data.collect_heading_ref);
+    for(i = 0; i < wpc; i++)
+    {
+        wireless_printf("[S1]   pt%d type=%d x=%.2f y=%.2f\r\n",
+                        i, (int)s1_task_data.points[i].type,
+                        s1_task_data.points[i].x, s1_task_data.points[i].y);
+    }
+#endif
+
     return 1;
 }
 
@@ -180,6 +191,9 @@ static uint8 subject1_add_current_point(void)
         inav_x = 0.0f;
         inav_y = 0.0f;
         inav_active = 1;
+#if S1_ISDEBUG
+        wireless_printf("[S1] Collect start: heading_ref=%.1f\r\n", inav_heading_ref);
+#endif
     }
 
     wp = &s1_task_data.points[s1_task_data.waypoint_count];
@@ -192,6 +206,11 @@ static uint8 subject1_add_current_point(void)
 
     s1_task_data.waypoint_count++;
     led(toggle);
+#if S1_ISDEBUG
+    wireless_printf("[S1] Point %d added: type=%d x=%.2f y=%.2f\r\n",
+                    s1_task_data.waypoint_count - 1,
+                    (int)wp->type, wp->x, wp->y);
+#endif
     subject1_save_to_flash();
     return 1;
 }
@@ -354,11 +373,26 @@ static void subject1_launch(void)
         float bearing_stored_deg = atan2f(dx01, dy01) * (180.0f / 3.14159265f);
         // 当前 IMU 对应该方位，反推坐标系参考航向
         inav_heading_ref = quat_yaw_deg - bearing_stored_deg;
+#if S1_ISDEBUG
+        wireless_printf("[S1] Launch: yaw=%.1f bearing_stored=%.1f heading_ref=%.1f\r\n",
+                        quat_yaw_deg, bearing_stored_deg, inav_heading_ref);
+#endif
     }
 
     inav_x      = 0.0f;
     inav_y      = 0.0f;
     inav_active = 1;
+
+#if S1_ISDEBUG
+    wireless_printf("[S1] Route: count=%d route_sel=%d\r\n", full_count, s1_task_data.route_sel);
+    {
+        uint8 _i;
+        for(_i = 0; _i < full_count; _i++)
+        {
+            wireless_printf("[S1]   wp%d x=%.2f y=%.2f\r\n", _i, full_x[_i], full_y[_i]);
+        }
+    }
+#endif
 
     run_state = 1;
     ins_tracker_start_with_points(full_x, full_y, full_count);
