@@ -205,6 +205,32 @@ static float ramp_speed(float current_speed, float desired_speed)
     return current_speed + delta;
 }
 
+static float subject2_target_speed(float dist, subject2_point_type_enum target_type)
+{
+    if(target_type == S2_POINT_MINE && dist < S2_MINE_APPROACH_SLOWDOWN_DIST)
+    {
+        float ratio = dist / S2_MINE_APPROACH_SLOWDOWN_DIST;
+        return S2_MINE_APPROACH_SPEED + (S2_CRUISE_SPEED - S2_MINE_APPROACH_SPEED) * ratio;
+    }
+
+    return S2_CRUISE_SPEED;
+}
+
+static uint8 subject2_arrive_ready(float dist, float heading_err, subject2_point_type_enum target_type)
+{
+    if(dist >= S2_ARRIVE_DIST)
+    {
+        return 0;
+    }
+
+    if(target_type == S2_POINT_MINE && func_abs(heading_err) > S2_ARRIVE_HEADING_ERR_DEG)
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
 static float subject2_normalize_angle(float a)
 {
     while(a > 180.0f) a -= 360.0f;
@@ -346,7 +372,7 @@ static void subject2_start_spin(uint8 mine_idx)
     s2_spin_dir = (mine_idx & 0x01) ? -1 : 1;
     s2_spin_target_yaw = 720.0f;
     target_speed = 0.0f;
-    car_spin_start(0.0f, s2_spin_dir);
+    car_spin_start(s2_spin_target_yaw, s2_spin_dir);
     s2_phase = S2_PHASE_SPINNING;
 }
 
@@ -534,6 +560,7 @@ void subject2_update(void)
     float current_heading_rel;
     float heading_err;
     float yaw_used_deg;
+    subject2_point_type_enum target_type;
 
     if(s2_ui_state != UI_STATE_RUNNING)
     {
@@ -552,6 +579,7 @@ void subject2_update(void)
             float spin_yaw_bias = (s2_spin_dir > 0) ? S2_SPIN_YAW_BIAS_CW_DEG : S2_SPIN_YAW_BIAS_CCW_DEG;
             car_spin_stop();
             s2_yaw_bias_deg = subject2_normalize_angle(s2_yaw_bias_deg + spin_yaw_bias);
+            inav_heading_ref = subject2_normalize_angle(inav_heading_ref - spin_yaw_bias);
             turn_duty_max = 300;
             s2_phase = (s2_current_target_idx < (s2_task_data.point_count - 1)) ? S2_PHASE_TO_MINE : S2_PHASE_TO_TURNBACK;
             s2_current_target_idx++;
@@ -569,11 +597,17 @@ void subject2_update(void)
 
     target_x = s2_task_data.points[s2_current_target_idx].x;
     target_y = s2_task_data.points[s2_current_target_idx].y;
+    target_type = s2_task_data.points[s2_current_target_idx].type;
     dist = point_distance(inav_x, inav_y, target_x, target_y);
 
-    if(dist < S2_ARRIVE_DIST)
+    bearing_local = point_bearing(inav_x, inav_y, target_x, target_y);
+    yaw_used_deg = subject2_current_yaw_deg();
+    current_heading_rel = normalize_angle(yaw_used_deg - inav_heading_ref);
+    heading_err = normalize_angle(bearing_local - current_heading_rel);
+
+    if(subject2_arrive_ready(dist, heading_err, target_type))
     {
-        if(s2_task_data.points[s2_current_target_idx].type == S2_POINT_TURNBACK)
+        if(target_type == S2_POINT_TURNBACK)
         {
             s2_phase = S2_PHASE_RETURN;
             s2_current_target_idx = 0;
@@ -597,11 +631,6 @@ void subject2_update(void)
         }
     }
 
-    bearing_local = point_bearing(inav_x, inav_y, target_x, target_y);
-    yaw_used_deg = subject2_current_yaw_deg();
-    current_heading_rel = normalize_angle(yaw_used_deg - inav_heading_ref);
-    heading_err = normalize_angle(bearing_local - current_heading_rel);
-
-    target_speed = ramp_speed(target_speed, S2_CRUISE_SPEED);
+    target_speed = ramp_speed(target_speed, subject2_target_speed(dist, target_type));
     car_turn_control(heading_err, quat_yaw_rate_dps);
 }

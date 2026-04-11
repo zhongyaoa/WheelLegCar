@@ -40,8 +40,9 @@ int16 turn_duty_max = 300;
 #define POSTURE_SPIN_KD 0.25f
 #define POSTURE_SPIN_DONE_ERR_DEG 5.0f
 #define POSTURE_SPIN_DONE_RATE_DPS 25.0f
-#define POSTURE_SPIN_FEED_DUTY 120
-#define POSTURE_SPIN_MOTOR_DUTY 300
+#define POSTURE_SPIN_MOTOR_DUTY_MAX 450
+#define POSTURE_SPIN_MOTOR_DUTY_MIN 160
+#define POSTURE_SPIN_SLOWDOWN_START_DEG 240.0f
 
 typedef enum
 {
@@ -51,7 +52,33 @@ typedef enum
 
 static car_spin_state_enum car_spin_state = CAR_SPIN_STATE_IDLE;
 static float car_spin_target_yaw = 0.0f;
+static int16 car_spin_motor_duty = POSTURE_SPIN_MOTOR_DUTY_MAX;
 static int8  car_spin_dir = 1;
+
+static float spin_output_scale(float target_deg, float accum_deg)
+{
+    float remaining_deg;
+
+    if(target_deg <= 0.0f)
+    {
+        return 1.0f;
+    }
+
+    remaining_deg = target_deg - accum_deg;
+    if(remaining_deg <= 0.0f)
+    {
+        return (float)POSTURE_SPIN_MOTOR_DUTY_MIN / (float)POSTURE_SPIN_MOTOR_DUTY_MAX;
+    }
+
+    if(remaining_deg >= POSTURE_SPIN_SLOWDOWN_START_DEG)
+    {
+        return 1.0f;
+    }
+
+    return ((float)POSTURE_SPIN_MOTOR_DUTY_MIN +
+           ((float)(POSTURE_SPIN_MOTOR_DUTY_MAX - POSTURE_SPIN_MOTOR_DUTY_MIN) * (remaining_deg / POSTURE_SPIN_SLOWDOWN_START_DEG))) /
+           (float)POSTURE_SPIN_MOTOR_DUTY_MAX;
+}
 
 static float normalize_angle(float a)
 {
@@ -298,16 +325,19 @@ void car_turn_reset(void)
 
 void car_spin_start(float target_yaw_deg, int8 spin_dir)
 {
-    (void)target_yaw_deg;
-    car_spin_target_yaw = 0.0f;
+    car_spin_target_yaw = func_abs(target_yaw_deg);
+    car_spin_motor_duty = POSTURE_SPIN_MOTOR_DUTY_MAX;
     car_spin_dir = (spin_dir >= 0) ? 1 : -1;
     car_spin_state = CAR_SPIN_STATE_RUNNING;
     spin_accum_deg = 0.0f;
-    turn_diff_ext = func_limit_ab((int16)(-car_spin_dir * POSTURE_SPIN_FEED_DUTY), -turn_duty_max, turn_duty_max);
+    turn_diff_ext = func_limit_ab((int16)(-car_spin_dir * POSTURE_SPIN_MOTOR_DUTY_MIN), -turn_duty_max, turn_duty_max);
 }
 
 uint8 car_spin_update(float current_yaw_deg, float yaw_rate_dps)
 {
+    float scale;
+    int16 duty;
+
     (void)current_yaw_deg;
     (void)yaw_rate_dps;
 
@@ -316,13 +346,23 @@ uint8 car_spin_update(float current_yaw_deg, float yaw_rate_dps)
         return 0;
     }
 
-    turn_diff_ext = func_limit_ab((int16)(-car_spin_dir * POSTURE_SPIN_FEED_DUTY), -turn_duty_max, turn_duty_max);
+    scale = spin_output_scale(car_spin_target_yaw, spin_accum_deg);
+    duty = (int16)(POSTURE_SPIN_MOTOR_DUTY_MAX * scale);
+    if(duty < POSTURE_SPIN_MOTOR_DUTY_MIN)
+    {
+        duty = POSTURE_SPIN_MOTOR_DUTY_MIN;
+    }
+
+    car_spin_motor_duty = func_limit_ab(duty, POSTURE_SPIN_MOTOR_DUTY_MIN, POSTURE_SPIN_MOTOR_DUTY_MAX);
+    turn_diff_ext = func_limit_ab((int16)(-car_spin_dir * car_spin_motor_duty), -turn_duty_max, turn_duty_max);
     return 0;
 }
 
 void car_spin_stop(void)
 {
     car_spin_state = CAR_SPIN_STATE_IDLE;
+    car_spin_target_yaw = 0.0f;
+    car_spin_motor_duty = POSTURE_SPIN_MOTOR_DUTY_MAX;
     spin_accum_deg = 0.0f;
     turn_diff_ext = 0;
 }
@@ -343,7 +383,7 @@ void car_motor_control(void)
 
         if(car_spin_state == CAR_SPIN_STATE_RUNNING)
         {
-            td = (int16)(-car_spin_dir * POSTURE_SPIN_MOTOR_DUTY);
+            td = (int16)(-car_spin_dir * car_spin_motor_duty);
         }
         else
         {

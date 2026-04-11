@@ -13,7 +13,7 @@
 //#include "balance_control.h"
 //#include "steer_control.h"
 //#include "small_driver_uart_control.h"
-//#define WHEEL_CIRCUMFERENCE_CM 20.1f     // 轮子周长(cm)，直径约 6.4cm
+//#define WHEEL_CIRCUMFERENCE_CM 20.1f     // 轮子周长(cm)，直径约 7.3cm
 #define WHEEL_DIAMETER 7.3f //cm新轮胎7.3cm旧轮胎6.4cm
 #define INAV_SPEED_FILTER_ALPHA 0.2f      // 惯导速度低通滤波系数
 #define INAV_STATIONARY_SPEED_RPM 30      // 低于该转速认为接近静止

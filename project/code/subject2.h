@@ -25,11 +25,14 @@ typedef enum
 #define S2_MAX_ROUTE_POINTS             (S2_MAX_MINES + 3)
 #define S2_MINE_SPIN_LAPS               1
 #define S2_ARRIVE_DIST                  0.10f
+#define S2_ARRIVE_HEADING_ERR_DEG       20.0f
 #define S2_CRUISE_SPEED                 450.0f
+#define S2_MINE_APPROACH_SLOWDOWN_DIST  0.45f
+#define S2_MINE_APPROACH_SPEED          150.0f
 #define S2_SPEED_RAMP_STEP              40.0f
 #define S2_SPIN_HOLD_DEG                12.0f
-#define S2_SPIN_YAW_BIAS_CW_DEG         0.0f
-#define S2_SPIN_YAW_BIAS_CCW_DEG        0.0f
+#define S2_SPIN_YAW_BIAS_CW_DEG         -5.0f
+#define S2_SPIN_YAW_BIAS_CCW_DEG        5.0f
 
 typedef struct
 {
