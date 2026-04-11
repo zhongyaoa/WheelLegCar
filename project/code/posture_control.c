@@ -34,8 +34,8 @@ int16 right_motor_duty = 0;
 int16 balance_duty_max = 10000;
 int16 turn_duty_max = 300;
 
-#define POSTURE_TURN_KP 8.0f
-#define POSTURE_TURN_KD 0.5f
+#define POSTURE_TURN_KP 10.0f//原8
+#define POSTURE_TURN_KD 2.0f//原0.5
 #define POSTURE_SPIN_KP 9.0f
 #define POSTURE_SPIN_KD 0.25f
 #define POSTURE_SPIN_DONE_ERR_DEG 5.0f

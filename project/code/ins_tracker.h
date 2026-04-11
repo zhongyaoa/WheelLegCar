@@ -16,10 +16,10 @@
 #define INAV_TRACKER_CRUISE_SPEED      (1000.0f) // 直线巡航速度（负值=前进，与 target_speed 约定一致）
 #define INAV_TRACKER_MIN_SPEED         (200.0f)  // 最低循迹速度，避免转向时完全没速度
 #define INAV_TRACKER_SLOWDOWN_DIST     2.0f       // 距离小于该值时开始按距离降速 (m)
-#define INAV_TRACKER_TURN_SLOWDOWN_ANG 25.0f      // 转角大于该值时开始按角度降速 (deg)
+#define INAV_TRACKER_TURN_SLOWDOWN_ANG 60.0f      // 转角大于该值时开始按角度降速 (deg)
 #define INAV_TRACKER_TURN_STOP_ANG     70.0f      // 转角接近该值时降到最低速度 (deg)
 #define INAV_TRACKER_SPEED_RAMP_STEP   60.0f      // 每次循迹更新允许的目标速度最大变化量
-#define INAV_TRACKER_CTE_GAIN          1.5f       // 横向偏差增益（越大纠偏越积极，过大会振荡）
+#define INAV_TRACKER_CTE_GAIN          0.7f       // 横向偏差增益（越大纠偏越积极，过大会振荡）
 #define INAV_TRACKER_CTE_MAX_CORR      40.0f      // 横向偏差最大修正角度 (deg)
 
 typedef enum
